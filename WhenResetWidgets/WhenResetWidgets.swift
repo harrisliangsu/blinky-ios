@@ -198,41 +198,26 @@ private struct WidgetMetricTarget: Hashable, Sendable {
     var apiBalance: APIBalance?
 
     static func targets(for snapshot: UsageSnapshot, after date: Date = .distantPast) -> [WidgetMetricTarget] {
-        var metricIDs = Set<String>()
-        var result = snapshot.usageWindows.filter {
-            $0.resetsAt > date && metricIDs.insert($0.metricID).inserted
-        }.map {
-            WidgetMetricTarget(kind: .quota, metricID: $0.metricID, title: $0.displayTitle,
-                               expiresAt: $0.resetsAt, remainingPercent: $0.remainingPercent,
-                               resetCount: nil, grantedAt: nil, apiBalance: nil)
+        WidgetSurface.metrics(for: snapshot, after: date).map { metric in
+            WidgetMetricTarget(
+                kind: Self.kind(metric.kind),
+                metricID: metric.metricID,
+                title: metric.title,
+                expiresAt: metric.expiresAt,
+                remainingPercent: metric.remainingPercent,
+                resetCount: metric.resetCount,
+                grantedAt: metric.grantedAt,
+                apiBalance: metric.apiBalance
+            )
         }
-        if let credit = snapshot.nextBankedResetCredit(after: date), let expiry = credit.expiresAt {
-            let activeCreditCount = snapshot.availableResetCredits.filter { credit in
-                credit.expiresAt.map { $0 > date } ?? true
-            }.count
-            result.append(.init(kind: .bankedReset, metricID: "banked-resets", title: "Banked resets",
-                                expiresAt: expiry, remainingPercent: nil,
-                                resetCount: max(snapshot.availableResetCount,
-                                                activeCreditCount),
-                                grantedAt: credit.grantedAt, apiBalance: nil))
-        }
-        if let balance = snapshot.apiBalance {
-            result.append(.init(
-                kind: .apiBalance,
-                metricID: "api-balance",
-                title: balance.title,
-                expiresAt: balance.periodEnd,
-                remainingPercent: balance.fractionRemaining.map { $0 * 100 },
-                resetCount: nil,
-                grantedAt: balance.periodStart,
-                apiBalance: balance
-            ))
-        }
-        return result.sorted {
-            let lhsDate = $0.expiresAt ?? .distantFuture
-            let rhsDate = $1.expiresAt ?? .distantFuture
-            if lhsDate != rhsDate { return lhsDate < rhsDate }
-            return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+    }
+
+    private static func kind(_ kind: WidgetSurface.Metric.Kind) -> Kind {
+        switch kind {
+        case .quota: .quota
+        case .bankedReset: .bankedReset
+        case .apiBalance: .apiBalance
+        case .unavailable: .unavailable
         }
     }
 

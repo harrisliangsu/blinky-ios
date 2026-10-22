@@ -14,6 +14,10 @@ struct AccountCredentials: Codable, Equatable, Sendable {
     var oauthClientSecret: String? = nil
     var monthlyBudget: Double? = nil
     var currencyCode: String? = nil
+    /// Pinned provider host, currently the 智谱 / Z.AI quota URL that accepted this key.
+    var serviceHost: String? = nil
+    /// `automatic`, `global`, or `mainland` for 智谱 GLM. Other providers leave this unset.
+    var serviceRegion: String? = nil
 }
 
 struct ChatGPTDuplicateCredentialCandidate: Sendable {
@@ -114,11 +118,11 @@ enum ChatGPTDuplicateCredentialPolicy {
 }
 
 enum KeychainStore {
-    static let credentialsService = "ad.neko.when.credentials"
-    static let accountsService = "ad.neko.when.accounts"
-    static let accountMergeAliasesService = "ad.neko.when.account-merge-aliases"
-    static let pushRegistrationService = "ad.neko.when.push-registration"
-    static let pushServerAccessService = "ad.neko.when.push-server-access"
+    static var credentialsService: String { "\(AppIdentity.bundleIdentifier).credentials" }
+    static var accountsService: String { "\(AppIdentity.bundleIdentifier).accounts" }
+    static var accountMergeAliasesService: String { "\(AppIdentity.bundleIdentifier).account-merge-aliases" }
+    static var pushRegistrationService: String { "\(AppIdentity.bundleIdentifier).push-registration" }
+    static var pushServerAccessService: String { "\(AppIdentity.bundleIdentifier).push-server-access" }
 
     static func save(_ credentials: AccountCredentials, for id: UUID) throws {
         let data = try JSONEncoder().encode(credentials)

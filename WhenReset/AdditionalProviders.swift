@@ -1097,10 +1097,15 @@ struct GrokProvider {
     static let tokenURL = URL(string: "https://auth.x.ai/oauth2/token")!
     static let userURL = URL(string: "https://cli-chat-proxy.grok.com/v1/user?include=subscription")!
     static let billingURL = URL(string: "https://cli-chat-proxy.grok.com/v1/billing?format=credits")!
-    private static let scopes = [
-        "openid", "profile", "email", "offline_access", "grok-cli:access", "api:access",
+    static let settingsURL = URL(string: "https://cli-chat-proxy.grok.com/v1/settings")!
+    /// Pulse's measured Grok CLI device-code set. `billing:read` is refused for this client.
+    /// `profile` and `api:access` are the CLI's extra scopes and are not required to read the pool.
+    static let requestedScopes = [
+        "openid", "email", "offline_access", "grok-cli:access",
     ]
-    private static let tokenAuthHeader = "xai-grok-cli"
+    static let tokenAuthHeaderValue = "xai-grok-cli"
+    private static let scopes = requestedScopes
+    private static let tokenAuthHeader = tokenAuthHeaderValue
     private static let grokClientVersion = "1.0.0"
 
     private let session: URLSession
@@ -1116,12 +1121,9 @@ struct GrokProvider {
         request.httpBody = Self.formEncoded([
             ("client_id", Self.clientID),
             ("scope", Self.scopes.joined(separator: " ")),
-            ("referrer", "grok-build"),
         ])
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.setValue(Self.grokClientVersion, forHTTPHeaderField: "x-grok-client-version")
-        request.setValue("ui", forHTTPHeaderField: "x-grok-client-surface")
         request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await AdditionalProviderNetworking.data(
@@ -1150,8 +1152,6 @@ struct GrokProvider {
             ])
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-            request.setValue(Self.grokClientVersion, forHTTPHeaderField: "x-grok-client-version")
-            request.setValue("ui", forHTTPHeaderField: "x-grok-client-surface")
             request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
 
             do {
@@ -1200,18 +1200,12 @@ struct GrokProvider {
             throw AdditionalProviderError.missingRefreshToken("Grok")
         }
 
-        let accessClaims = Self.jwtClaims(credentials.accessToken)
-        var fields = [
+        let fields = [
             ("grant_type", "refresh_token"),
             ("refresh_token", credentials.refreshToken),
             ("client_id", Self.clientID),
+            ("scope", Self.scopes.joined(separator: " ")),
         ]
-        if let principalType = AdditionalProviderParsing.string(accessClaims["principal_type"]) {
-            fields.append(("principal_type", principalType))
-        }
-        if let principalID = AdditionalProviderParsing.string(accessClaims["principal_id"]) {
-            fields.append(("principal_id", principalID))
-        }
 
         var request = URLRequest(url: Self.tokenURL)
         request.httpMethod = "POST"
@@ -1219,7 +1213,6 @@ struct GrokProvider {
         request.httpBody = Self.formEncoded(fields)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.setValue(Self.grokClientVersion, forHTTPHeaderField: "x-grok-client-version")
         request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await AdditionalProviderNetworking.data(
@@ -1258,15 +1251,8 @@ struct GrokProvider {
 
     func fetchUsage(account: MonitoredAccount,
                     credentials: AccountCredentials) async throws -> UsageSnapshot {
-        var request = URLRequest(url: Self.billingURL)
+        var request = Self.cliRequest(url: Self.billingURL, token: credentials.accessToken)
         request.timeoutInterval = 20
-        request.setValue("Bearer \(credentials.accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue(Self.tokenAuthHeader, forHTTPHeaderField: "X-XAI-Token-Auth")
-        request.setValue(account.workspaceID, forHTTPHeaderField: "x-userid")
-        request.setValue(Self.grokClientVersion, forHTTPHeaderField: "x-grok-client-version")
-        request.setValue("interactive", forHTTPHeaderField: "x-grok-client-mode")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await AdditionalProviderNetworking.data(
             for: request, session: session, provider: "Grok"
@@ -1278,11 +1264,47 @@ struct GrokProvider {
         guard (200..<300).contains(status) else {
             throw AdditionalProviderError.server("Grok", status)
         }
-        return try Self.parseUsage(
+        var snapshot = try Self.parseUsage(
             account: account,
             data: data,
             accessToken: credentials.accessToken
         )
+        if let plan = try? await fetchPlanName(credentials: credentials) {
+            snapshot.plan = plan
+        }
+        return snapshot
+    }
+
+    /// Plan name comes from `/v1/settings` (`subscription_tier_display`), not the billing reply.
+    /// A stalled settings call must not discard the usage figures already in hand.
+    private func fetchPlanName(credentials: AccountCredentials) async throws -> String? {
+        var request = Self.cliRequest(url: Self.settingsURL, token: credentials.accessToken)
+        request.timeoutInterval = 4
+        let (data, response) = try await AdditionalProviderNetworking.data(
+            for: request, session: session, provider: "Grok"
+        )
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return Self.planName(fromSettings: data)
+    }
+
+    private static func cliRequest(url: URL, token: String) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // Without this header the proxy answers the enterprise credit shape, whose
+        // monthly limit is zero on a personal plan.
+        request.setValue(tokenAuthHeader, forHTTPHeaderField: "x-xai-token-auth")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
+        return request
+    }
+
+    static func planName(fromSettings data: Data) -> String? {
+        guard let root = try? AdditionalProviderParsing.json(data, provider: "Grok"),
+              let tier = AdditionalProviderParsing.string(root["subscription_tier_display"])?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !tier.isEmpty else { return nil }
+        return tier
     }
 
     static func deviceLink(from data: Data, now: Date = .now) throws -> GrokDeviceLink {
@@ -1398,38 +1420,33 @@ struct GrokProvider {
         guard let config = AdditionalProviderParsing.dictionary(root["config"]) else {
             throw AdditionalProviderError.noResettableQuota("Grok")
         }
-        let usedPercent = AdditionalProviderParsing.number(
-            config["creditUsagePercent"] ?? config["credit_usage_percent"]
-        ) ?? Self.legacyUsedPercent(config)
-        guard let usedPercent, usedPercent.isFinite else {
-            throw AdditionalProviderError.invalidResponse("Grok")
-        }
-
         let period = AdditionalProviderParsing.dictionary(
             config["currentPeriod"] ?? config["current_period"]
         )
-        let periodStart = AdditionalProviderParsing.date(
+        guard let periodStart = AdditionalProviderParsing.date(
             period?["start"] ?? config["billingPeriodStart"] ?? config["billing_period_start"]
-        )
-        guard let periodEnd = AdditionalProviderParsing.date(
+        ), let periodEnd = AdditionalProviderParsing.date(
             period?["end"] ?? config["billingPeriodEnd"] ?? config["billing_period_end"]
-        ), periodEnd > now else {
+        ), periodEnd > periodStart, periodEnd > now else {
             throw AdditionalProviderError.noResettableQuota("Grok")
         }
 
-        let periodType = AdditionalProviderParsing.string(period?["type"])?.uppercased()
-        let periodCode = AdditionalProviderParsing.integer(period?["type"])
-        let durationMinutes = periodStart.map {
-            max(1, Int((periodEnd.timeIntervalSince($0) / 60).rounded()))
+        // Proto3 JSON omits zeroes. A missing percentage is 0% only inside the
+        // period that is actually running; an ended period is not this week's pool.
+        let reportedPercent = AdditionalProviderParsing.number(
+            config["creditUsagePercent"] ?? config["credit_usage_percent"]
+        )
+        let periodContainsNow = (periodStart...periodEnd).contains(now)
+        guard let usedPercent = reportedPercent ?? (periodContainsNow ? 0 : nil),
+              usedPercent.isFinite else {
+            throw AdditionalProviderError.noResettableQuota("Grok")
         }
-        let isWeekly = periodType?.contains("WEEKLY") == true
-            || periodCode == 1
-            || durationMinutes.map { (9_000...11_000).contains($0) } == true
-        let isMonthly = periodType?.contains("MONTHLY") == true
-            || periodCode == 2
-            || durationMinutes.map { (38_000...46_000).contains($0) } == true
+
+        let seconds = Int(periodEnd.timeIntervalSince(periodStart).rounded())
+        let isWeekly = (6 * 86_400...8 * 86_400).contains(seconds)
+        let isMonthly = (27 * 86_400...32 * 86_400).contains(seconds)
         let title = isWeekly ? "Weekly limit" : isMonthly ? "Monthly limit" : "Coding limit"
-        let minutes = isWeekly ? 10_080 : durationMinutes
+        let minutes = max(1, seconds / 60)
         let kind: UsageWindowKind = isWeekly ? .weekly : .additional
         let metricID = isWeekly ? "grok:weekly" : isMonthly ? "grok:monthly" : "grok:coding"
         let window = UsageWindow(
@@ -1460,19 +1477,6 @@ struct GrokProvider {
             resetCredits: [],
             fetchedAt: now
         )
-    }
-
-    private static func legacyUsedPercent(_ config: [String: Any]) -> Double? {
-        guard let limit = centValue(config["monthlyLimit"] ?? config["monthly_limit"]), limit > 0,
-              let used = centValue(config["used"]) else { return nil }
-        return used / limit * 100
-    }
-
-    private static func centValue(_ value: Any?) -> Double? {
-        if let root = AdditionalProviderParsing.dictionary(value) {
-            return AdditionalProviderParsing.number(root["val"])
-        }
-        return AdditionalProviderParsing.number(value)
     }
 
     private static func plan(in claims: [String: Any]) -> String? {

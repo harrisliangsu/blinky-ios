@@ -656,7 +656,7 @@ describe("one-use Worker linking", () => {
     expect(await response.json()).toEqual({
       version: 1,
       mode: "self_hosted",
-      topic: "ad.neko.when",
+      topic: "com.harrisliangsu.whenreset",
       server_origin: "https://push.example",
       display_name: "push.example",
       expires_at: session.expires_at,
@@ -1933,7 +1933,7 @@ describe("push registration API", () => {
     expect(await response.json()).toEqual({
       ok: true,
       mode: "self_hosted",
-      topic: "ad.neko.when",
+      topic: "com.harrisliangsu.whenreset",
     });
   });
 

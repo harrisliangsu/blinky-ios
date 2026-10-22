@@ -1,4 +1,5 @@
 .DS_Store
+Config/Local.xcconfig
 DerivedData/
 build/
 *.xcarchive

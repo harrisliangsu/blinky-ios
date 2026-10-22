@@ -34,7 +34,9 @@ credentials. Use encrypted storage and restricted, encrypted off-host backups as
 ## Intentional public APNs key
 
 `server/apns/WhenResetSharedAPNs.p8` is deliberately public so independent servers can send
-refresh hints to the official app. It is production-only and scoped to `ad.neko.when`; it
+refresh hints to the upstream app. It is production-only and scoped to `ad.neko.when`; it
+cannot send to this fork's `com.harrisliangsu.whenreset` topic. Set `APNS_KEY_ID`,
+`APNS_TEAM_ID`, `APNS_TOPIC`, and `APNS_PRIVATE_KEY` to Harris's own key before relying on push. The vendored key
 does not grant App Store Connect access or discover device tokens. This is the only private
 key file exception in secret scanning. CI checks its exact fingerprint, including history.
 Deployment keys, provider credentials and APNs device tokens are **not** public exceptions.

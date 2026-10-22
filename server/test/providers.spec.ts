@@ -256,21 +256,49 @@ describe("server-side provider adapters", () => {
     });
   });
 
-  it("parses the legacy Grok monthly billing shape", () => {
+  it("treats an omitted Grok percentage as zero inside the measured weekly period", () => {
     const parsed = providerTesting.grokBilling({
+      config: {
+        currentPeriod: {
+          type: "USAGE_PERIOD_TYPE_MONTHLY",
+          start: "2023-11-14T00:00:00Z",
+          end: "2023-11-21T00:00:00Z",
+        },
+      },
+    }, 1_700_000_000);
+
+    expect(parsed.window).toMatchObject({
+      metric_id: "grok:weekly",
+      kind: "weekly",
+      window_minutes: 10_080,
+      remaining_percent: 100,
+    });
+  });
+
+  it("rejects the enterprise Grok credit shape when the period is not running", () => {
+    expect(() => providerTesting.grokBilling({
       config: {
         monthlyLimit: { val: 2_000 },
         used: { val: 500 },
         billingPeriodStart: "2030-02-01T00:00:00Z",
         billingPeriodEnd: "2030-03-01T00:00:00Z",
       },
-    }, 1_700_000_000);
+    }, 1_700_000_000)).toThrow(/no resettable quota/);
+  });
 
-    expect(parsed.window).toMatchObject({
-      metric_id: "grok:monthly",
-      kind: "additional",
-      remaining_percent: 75,
-    });
+  it("keeps a 智谱 key on the host that already accepted it", () => {
+    expect(providerTesting.zaiCandidateURLs("automatic", null)).toEqual([
+      "https://api.z.ai/api/monitor/usage/quota/limit",
+      "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+    ]);
+    expect(providerTesting.zaiCandidateURLs("mainland", null)).toEqual([
+      "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+    ]);
+    expect(providerTesting.zaiCandidateURLs(
+      "automatic",
+      "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+    )).toEqual(["https://open.bigmodel.cn/api/monitor/usage/quota/limit"]);
+    expect(providerTesting.normalizedZAIServiceHost("https://evil.example/quota")).toBeNull();
   });
 
   it("refreshes Grok OAuth and sends the official billing headers", async () => {
@@ -292,6 +320,9 @@ describe("server-side provider adapters", () => {
             end: "2030-01-08T00:00:00Z",
           },
         },
+      }))
+      .mockResolvedValueOnce(Response.json({
+        subscription_tier_display: "SuperGrok Heavy",
       }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -312,15 +343,19 @@ describe("server-side provider adapters", () => {
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       "https://cli-chat-proxy.grok.com/v1/billing?format=credits"
     );
+    const refreshBody = String(fetchMock.mock.calls[0]?.[1]?.body ?? "");
+    expect(refreshBody).toContain("scope=openid+email+offline_access+grok-cli%3Aaccess");
+    expect(refreshBody).not.toContain("billing%3Aread");
+    expect(refreshBody).not.toContain("api%3Aaccess");
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       headers: expect.objectContaining({
         authorization: `Bearer ${accessToken}`,
         "x-xai-token-auth": "xai-grok-cli",
-        "x-userid": "user-123",
-        "x-grok-client-mode": "headless",
       }),
       redirect: "manual",
     });
+    expect(fetchMock.mock.calls[1]?.[1]?.headers?.["x-userid"]).toBeUndefined();
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("https://cli-chat-proxy.grok.com/v1/settings");
   });
 
   it("matches the app's deterministic reset-credit fallback IDs", () => {

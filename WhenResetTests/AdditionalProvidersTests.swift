@@ -507,7 +507,33 @@ final class AdditionalProvidersTests: XCTestCase {
         XCTAssertEqual(snapshot.primary?.remainingPercent ?? -1, 57.5, accuracy: 0.001)
     }
 
-    func testGrokFallsBackToLegacyMonthlyBillingShape() throws {
+    func testGrokUsesMeasuredWeeklyLengthAndTreatsOmittedUsageAsZeroInsideThePeriod() throws {
+        let during = Date(timeIntervalSince1970: 1_700_000_000)
+        let data = Data(#"""
+        {
+          "config": {
+            "currentPeriod": {
+              "type": "USAGE_PERIOD_TYPE_MONTHLY",
+              "start": "2023-11-14T00:00:00Z",
+              "end": "2023-11-21T00:00:00Z"
+            }
+          }
+        }
+        """#.utf8)
+
+        let snapshot = try GrokProvider.parseUsage(
+            account: makeAccount(.grok, name: "Grok account"),
+            data: data,
+            now: during
+        )
+
+        XCTAssertEqual(snapshot.primary?.metricID, "grok:weekly")
+        XCTAssertEqual(snapshot.primary?.kind, .weekly)
+        XCTAssertEqual(snapshot.primary?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.primary?.usedPercent ?? -1, 0, accuracy: 0.001)
+    }
+
+    func testGrokIgnoresEnterpriseCreditShapeOutsideTheRunningPeriod() {
         let data = Data(#"""
         {
           "config": {
@@ -519,15 +545,50 @@ final class AdditionalProvidersTests: XCTestCase {
         }
         """#.utf8)
 
+        XCTAssertThrowsError(try GrokProvider.parseUsage(
+            account: makeAccount(.grok, name: "Grok account"),
+            data: data,
+            now: now
+        ))
+    }
+
+    func testGrokReadsSettingsPlanNameAndRequestsOnlyTheCLIScopes() throws {
+        let data = Data(#"{"subscription_tier_display":" SuperGrok "}"#.utf8)
+        XCTAssertEqual(GrokProvider.planName(fromSettings: data), "SuperGrok")
+        XCTAssertNil(GrokProvider.planName(fromSettings: Data(#"{"subscription_tier_display":"  "}"#.utf8)))
+        XCTAssertEqual(GrokProvider.requestedScopes, [
+            "openid", "email", "offline_access", "grok-cli:access",
+        ])
+        XCTAssertFalse(GrokProvider.requestedScopes.contains("billing:read"))
+        XCTAssertFalse(GrokProvider.requestedScopes.contains("api:access"))
+        XCTAssertEqual(GrokProvider.billingURL.absoluteString,
+                       "https://cli-chat-proxy.grok.com/v1/billing?format=credits")
+        XCTAssertEqual(GrokProvider.settingsURL.absoluteString,
+                       "https://cli-chat-proxy.grok.com/v1/settings")
+        XCTAssertEqual(GrokProvider.tokenAuthHeaderValue, "xai-grok-cli")
+        XCTAssertEqual(ProviderID.grok.logoAssetName, "GrokLogo")
+    }
+
+    func testGrokMarksASpentWeeklyPoolFromItsOwnPercentage() throws {
+        let data = Data(#"""
+        {
+          "config": {
+            "creditUsagePercent": 100,
+            "currentPeriod": {
+              "start": "2030-01-01T00:00:00Z",
+              "end": "2030-01-08T00:00:00Z"
+            }
+          }
+        }
+        """#.utf8)
         let snapshot = try GrokProvider.parseUsage(
             account: makeAccount(.grok, name: "Grok account"),
             data: data,
             now: now
         )
-
-        XCTAssertEqual(snapshot.primary?.metricID, "grok:monthly")
-        XCTAssertEqual(snapshot.primary?.kind, .additional)
-        XCTAssertEqual(snapshot.primary?.remainingPercent ?? -1, 75, accuracy: 0.001)
+        XCTAssertEqual(snapshot.primary?.usedPercent ?? -1, 100, accuracy: 0.001)
+        XCTAssertEqual(snapshot.primary?.remainingPercent ?? -1, 0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.primary?.metricID, "grok:weekly")
     }
 
     func testGrokIdentityUsesOAuthSubjectAndTierWithoutTreatingTokenExpiryAsPlanExpiry() throws {

@@ -6,6 +6,7 @@
   <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key><string>XPC!</string>
   <key>CFBundleDisplayName</key><string>When Reset Widgets</string>
+  <key>AppGroupIdentifier</key><string>$(APP_GROUP_IDENTIFIER)</string>
   <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict>

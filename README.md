@@ -1,16 +1,27 @@
 # When Reset
 
+Harris Liang 的分支，基于 [iebb/when-reset](https://github.com/iebb/when-reset)。上游仓库没有 LICENSE 文件；本分支保留原作者署名，并改用 Harris 自己的 Bundle ID 前缀，以便用 Harris 的 Apple Developer 团队发布 TestFlight。
+
+This is Harris Liang's fork of [iebb/when-reset](https://github.com/iebb/when-reset). Upstream ships no LICENSE file. This fork keeps the original attribution and uses a Harris-owned bundle-id prefix so it can be signed with Harris's Apple Developer team.
+
 A small SwiftUI iOS monitor for AI coding usage limits and reset times.
+
+## 此分支 / This fork
+
+- **ChatGPT / Codex** 与 **Kimi Code** 保持原有设备登录与小组件。
+- **智谱 GLM（Z.AI / BigModel）**：除 `https://api.z.ai` 外，增加中国大陆 `https://open.bigmodel.cn`，额度路径仍是 `/api/monitor/usage/quota/limit`。HTTP 200 也会带 `code` / `success` 信封。添加账号时可选 Automatic / Global / 中国大陆；成功的主机按账号记住，避免用错区域的 key 反复打到另一台主机。
+- **Grok**：按 [Pulse](https://github.com/qunqin24/Pulse)（Apache-2.0）核对过的每周额度池。RFC 8628 设备码，scope 为 `openid email offline_access grok-cli:access`，然后 `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` 与 `/v1/settings`，请求头 `x-xai-token-auth: xai-grok-cli`。访问令牌大约 6 小时，用 refresh token 续期。
+- ChatGPT, Kimi Code, 智谱 GLM, and Grok each publish quota windows that the home-screen and Lock Screen widgets, plus Live Activity, render with that provider's mark.
 
 ## Features
 
 - Multiple accounts with a provider-ready account model
 - Codex-compatible ChatGPT device linking
 - Claude Code-compatible PKCE OAuth linking with refresh-token rotation
-- Grok Build device linking with weekly or monthly coding-credit resets
+- Grok device linking for the weekly account credit pool, with refresh-token rotation
 - Kimi Code device linking with 5-hour and weekly limits
 - GitHub Copilot device linking with chat and premium-request quotas
-- Z.AI GLM Coding Plan quota monitoring with 5-hour, weekly, and monthly limits
+- 智谱 GLM / Z.AI Coding Plan quota monitoring, including mainland BigModel (`open.bigmodel.cn`) and international `api.z.ai`
 - MiniMax Token Plan quota monitoring with 5-hour and weekly limits
 - Synthetic rolling 5-hour and weekly quota monitoring
 - Ollama Cloud session and weekly quota monitoring from an on-device browser session
@@ -35,11 +46,11 @@ A small SwiftUI iOS monitor for AI coding usage limits and reset times.
 
 ## Build
 
-1. Run `xcodegen generate`.
+1. Run `xcodegen generate` (or `xcodegen generate --spec project.yml`).
 2. Open `WhenReset.xcodeproj`.
-3. Select your development team for the app and widget targets.
-4. The app uses `ad.neko.when`, its widget extension, and the `group.ad.neko.when` App Group.
-5. Enable Push Notifications for the app identifier and regenerate the development and App Store provisioning profiles.
+3. Defaults live in `Config/WhenReset.xcconfig`. Override `APP_BUNDLE_IDENTIFIER`, `WIDGET_BUNDLE_IDENTIFIER`, `APP_GROUP_IDENTIFIER`, `KEYCHAIN_GROUP_SUFFIX`, or `DEVELOPMENT_TEAM` there, in gitignored `Config/Local.xcconfig`, or on the `xcodebuild` command line.
+4. The Harris defaults are `com.harrisliangsu.whenreset`, widget `com.harrisliangsu.whenreset.widgets`, and App Group `group.com.harrisliangsu.whenreset`. Upstream `ad.neko.when` belongs to the original author and is not used.
+5. In the Apple Developer portal, register those identifiers, enable App Groups on both, and enable Push Notifications on the app id. Then set `DEVELOPMENT_TEAM` to Harris's Team ID.
 6. Build on an iOS 17+ device or simulator.
 
 Keep code signing enabled when testing account linking in Simulator. An unsigned build
@@ -50,8 +61,34 @@ OAuth succeeds.
 
 GitHub Actions replaces Xcode Cloud for this repository:
 
-- `CI` tests the iOS app, builds unsigned iOS and universal macOS release configurations, and checks the Cloudflare Worker on every push and pull request targeting `master`.
-- `App Store Release` uploads iOS daily when the current commit has no successful release tag, and supports manual iOS/macOS uploads. It uses Xcode cloud signing, so signing certificates and provisioning profiles are created or downloaded by Xcode on the ephemeral runner.
+- `CI` runs on every pull request and push to `master`. On a macOS runner it installs XcodeGen, regenerates the project, runs the iOS unit tests, and builds unsigned iOS and universal macOS release configurations. Simulator tests are ad-hoc signed on the runner so Keychain tests can run; that signature does not use an Apple team. The job does not need Apple secrets. The Worker and Linux server jobs stay on Ubuntu.
+- `App Store Release` archives and uploads an iOS TestFlight build when a version tag `v*` (or `testflight-*`) is pushed, and supports a manual iOS/macOS dispatch. It uses Xcode automatic signing with an App Store Connect API key. If the secrets below are missing, that workflow stops before archiving and names the missing secrets. Pull-request CI still passes.
+
+### TestFlight secrets and Apple-side setup
+
+Pull-request CI does not read these. The tag workflow cannot upload until they exist as repository secrets:
+
+| Secret | What to put in it |
+| --- | --- |
+| `APP_STORE_CONNECT_KEY_ID` | App Store Connect API key id (Users and Access → Integrations → App Store Connect API). Role: Admin or App Manager. |
+| `APP_STORE_CONNECT_ISSUER_ID` | The issuer id shown on that same page. |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | The full `AuthKey_XXXX.p8` file contents, including the BEGIN/END lines. |
+| `APPLE_TEAM_ID` | Harris's 10-character Apple Developer Team ID. Do not use upstream `7P8CLHDH5G`. |
+
+Optional repository **variables** (not secrets) if the defaults should change: `APP_BUNDLE_IDENTIFIER`, `WIDGET_BUNDLE_IDENTIFIER`, `APP_GROUP_IDENTIFIER`, `KEYCHAIN_GROUP_SUFFIX`.
+
+Apple Developer steps before the first signed upload:
+
+1. Create an explicit App ID `com.harrisliangsu.whenreset` with Push Notifications and App Groups.
+2. Create an explicit App ID `com.harrisliangsu.whenreset.widgets` with App Groups. Do not enable Push on the widget.
+3. Create the App Group `group.com.harrisliangsu.whenreset` and enable it on both App IDs.
+4. Create the App Store Connect app record for `com.harrisliangsu.whenreset`.
+5. Create an internal TestFlight group named `Internal Testers` (the workflow adds the processed build to that group).
+6. Create the App Store Connect API key and store the three values above. Xcode cloud signing creates the distribution certificate and provisioning profiles on the runner; you do not upload a `.p12` or a provisioning profile.
+
+Push from the self-hosted server is separate. The vendored APNs key under `server/apns/` is the upstream author's production key and is topic-specific to `ad.neko.when`. It cannot send to `com.harrisliangsu.whenreset`. For Harris's bundle, set `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC` (`com.harrisliangsu.whenreset`), and `APNS_PRIVATE_KEY` (the `.p8` contents) in the server environment, using a key created for Harris's team.
+
+中文对照：PR 上的 CI 不需要 Apple 密钥。模拟器测试在 runner 上做 ad-hoc 签名，这样钥匙串测试才能通过；Release 构建保持未签名。打上 `v*` 版本标签后，TestFlight 工作流才会用 Apple 团队签名上传；缺上面四个 secret 时，该工作流会直接失败并列出缺哪几个，不会假成功。开发者网站要先建好 App ID、Widget ID、App Group，并打开主 App 的 Push Notifications。上游的 APNs 密钥不能给这个新 Bundle ID 发推送。
 
 Release preparation checks App Store Connect before archiving. It treats the checked-in
 marketing version as a minimum: if Apple has approved that version on a selected platform,
@@ -66,6 +103,7 @@ The release workflow reads these encrypted GitHub Actions repository secrets:
 - `APP_STORE_CONNECT_KEY_ID`
 - `APP_STORE_CONNECT_ISSUER_ID`
 - `APP_STORE_CONNECT_PRIVATE_KEY`
+- `APPLE_TEAM_ID`
 
 The private key exists only in the runner’s temporary directory for the duration of the job. Trigger `App Store Release` from the Actions tab and select `both`, `ios`, or `macos`. Pushing a `testflight-*` tag uploads iOS only. After Apple finishes processing the iOS build, the workflow adds it to the `Internal Testers` group.
 
@@ -80,10 +118,10 @@ the variable after investigating; never put the private key in the variable or r
 
 - ChatGPT reads private `wham` usage and banked-reset endpoints.
 - Claude uses the Claude Code OAuth client and usage endpoint.
-- Grok uses xAI’s official Grok Build device authorization and billing endpoint. When Reset requests identity, offline access, and CLI API access only, rotates refresh tokens, and reads the current coding-credit percentage and period end; it does not use xAI API spend as a coding-plan quota.
+- Grok follows the weekly account pool described by [Pulse](https://github.com/qunqin24/Pulse) (`Docs/providers/grok.md`, `GrokUsageService.swift`, Apache-2.0). Device OAuth scopes are `openid email offline_access grok-cli:access` (`billing:read` is refused for this public client). Usage is `GET /v1/billing?format=credits` and the plan name is `subscription_tier_display` from `GET /v1/settings`, both with `x-xai-token-auth: xai-grok-cli`. An omitted percentage is 0% only while that period is still running. The access token lasts about six hours and is refreshed with the refresh token. When Reset does not treat xAI API spend as the coding pool.
 - Kimi uses the public client embedded in the official Kimi Code client. Moonshot does not currently publish a third-party client-registration process.
 - GitHub Copilot uses GitHub device authorization, but exact remaining quotas come from the undocumented `copilot_internal/user` endpoint. Its bundled VS Code client ID should be replaced with a separately registered client before distribution.
-- Z.AI uses a user-provided GLM Coding Plan key to read the same quota data shown by Usage Statistics. The quota endpoint is not documented as a public API; general-purpose and pay-as-you-go keys are outside this app’s scope.
+- 智谱 GLM / Z.AI uses a user-provided Coding Plan key. Automatic mode tries `https://api.z.ai` and then `https://open.bigmodel.cn` (path `/api/monitor/usage/quota/limit`) and stores the host that returns a successful `code` / `success` envelope. Choosing Global or 中国大陆 sends the key to that host only, so a wrong-region key fails on the host the user picked instead of looking like a generic quota error. The quota endpoint is not documented as a public API; general-purpose and pay-as-you-go keys are outside this app’s scope.
 - MiniMax uses a user-provided Subscription Key and its documented Token Plan remaining-quota endpoint. When Reset tries the global service first, then the mainland-China service for regional keys. Standard pay-as-you-go keys are outside this app’s scope.
 - Synthetic and Warp use user-provided API keys with fixed quota endpoints. Both can opt in to self-hosted Worker monitoring.
 - OpenRouter reads the authenticated key's official credit-limit response, including its stable creator identity and daily, weekly, or monthly limit period when configured. Fireworks AI resolves the key's official account resource before reading account quotas, including the monthly USD spend limit when present. Both use fixed provider hosts and can opt in to self-hosted Worker monitoring.
@@ -128,6 +166,6 @@ After unlocking the Worker dashboard with `REGISTRATION_ACCESS_KEY`, the operato
 
 The APNs signing key under `server/apns/` is deliberately versioned, not an accidentally committed deployment secret. This follows [Bark Server’s implementation](https://github.com/Finb/bark-server/blob/master/apns/apns_certs.go), which bundles its APNs signing credential so independent self-hosted servers can send notifications to the official app.
 
-When Reset’s key is production-only and topic-specific to `ad.neko.when`. It cannot access App Store Connect, another app or topic, or discover device tokens. A sender still needs a valid production device token, so each deployment must protect its device tokens and registration API. See the [shared APNs key security model](server/README.md#shared-apns-key) for the exact restrictions and trust boundary.
+The vendored APNs key is the upstream author's production key, topic-specific to `ad.neko.when`. It cannot access App Store Connect, Harris's `com.harrisliangsu.whenreset` topic, or discover device tokens. This fork's server advertises `APNS_TOPIC` (default `com.harrisliangsu.whenreset`). Replace the key with one from Harris's team before expecting pushes to the TestFlight app. See the [shared APNs key security model](server/README.md#shared-apns-key) for the upstream key's restrictions.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/iebb/when-reset/tree/master/server)

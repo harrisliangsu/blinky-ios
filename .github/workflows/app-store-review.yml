@@ -76,7 +76,7 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_BUNDLE_ID: ad.neko.when
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
           MARKETING_VERSION: ${{ inputs.marketing_version }}
           BUILD_NUMBER: ${{ inputs.build_number }}
           REVIEW_PLATFORMS: ${{ inputs.platform == 'both' && 'IOS,MAC_OS' || inputs.platform == 'macos' && 'MAC_OS' || 'IOS' }}

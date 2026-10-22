@@ -11,6 +11,7 @@ struct AddAccountView: View {
     @State private var selectedProvider: ProviderID?
     @State private var claudeCode = ""
     @State private var zaiAPIKey = ""
+    @State private var zaiRegion: ZAIRegion = .automatic
     @State private var miniMaxAPIKey = ""
     @State private var syntheticAPIKey = ""
     @State private var ollamaCookie = ""
@@ -41,6 +42,9 @@ struct AddAccountView: View {
         self.relinkingAccount = relinkingAccount
         _selectedProvider = State(initialValue: relinkingAccount?.providerID)
         let savedCredentials = relinkingAccount.flatMap { try? KeychainStore.load(for: $0.id) }
+        if let savedRegion = savedCredentials?.serviceRegion.flatMap(ZAIRegion.init(rawValue:)) {
+            _zaiRegion = State(initialValue: savedRegion)
+        }
         _antigravityClientID = State(initialValue: savedCredentials?.oauthClientID ?? "")
         _antigravityClientSecret = State(initialValue: savedCredentials?.oauthClientSecret ?? "")
         let savedBudget = savedCredentials?.monthlyBudget.map { String(format: "%.2f", $0) } ?? ""
@@ -370,7 +374,7 @@ struct AddAccountView: View {
         case .chatGPT:
             "Uses the same secure device-link flow as Codex. Your token is stored only in this device’s Keychain."
         case .grok:
-            "Uses xAI’s Grok Build device authorization flow. When Reset requests only identity, offline access, and Grok CLI API access; tokens are stored in Keychain."
+            "Uses xAI’s RFC 8628 device login for the weekly Grok credit pool. When Reset requests openid, email, offline access, and grok-cli:access, then refreshes the access token (about 6 hours). Tokens stay in Keychain."
         case .kimi:
             "Uses Kimi Code’s device authorization flow. This integration relies on Kimi’s public first-party client and is experimental."
         case .githubCopilot:
@@ -404,11 +408,21 @@ struct AddAccountView: View {
 
     private var zaiLinker: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Enter the plan-specific API key from your Z.AI account. It is used only to read Coding Plan quota data and is stored in this device’s Keychain.")
+            Text("Enter the Coding Plan key from 智谱 BigModel (open.bigmodel.cn) or Z.AI (api.z.ai). When Reset reads quota only, stores the key in Keychain, and remembers which host accepted it.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            SecureField("Z.AI Coding Plan API key", text: $zaiAPIKey)
+            Picker("Region · 区域", selection: $zaiRegion) {
+                ForEach(ZAIRegion.allCases) { region in
+                    Text(region.title).tag(region)
+                }
+            }
+            .pickerStyle(.menu)
+            Text(zaiRegion.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            SecureField("智谱 GLM / Z.AI Coding Plan API key", text: $zaiAPIKey)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.system(.body, design: .monospaced))
@@ -417,10 +431,11 @@ struct AddAccountView: View {
 
             Button {
                 completionTask = Task {
-                    if await store.addZAIAccount(apiKey: zaiAPIKey, replacing: relinkingAccount) { dismiss() }
+                    if await store.addZAIAccount(apiKey: zaiAPIKey, region: zaiRegion,
+                                                  replacing: relinkingAccount) { dismiss() }
                 }
             } label: {
-                Label("Connect Z.AI Coding Plan", systemImage: "key.fill")
+                Label("Connect 智谱 GLM", systemImage: "key.fill")
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity, minHeight: 28)
             }

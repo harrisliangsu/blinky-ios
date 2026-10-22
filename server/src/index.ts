@@ -5,6 +5,7 @@ import {
   fetchProviderUsage,
   normalizeFireworksAccountResource,
   providerRetryDelaySeconds,
+  serviceCredentialFields,
   ProviderFetchError,
   type ProviderAccount,
   type ProviderCredentials,
@@ -63,9 +64,19 @@ const MAX_DEVICE_SNAPSHOT_CLOCK_SKEW_SECONDS = 5 * 60;
 const APNS_TOKEN_REFRESH_SECONDS = 50 * 60;
 const APNS_PRODUCTION_HOST = "https://api.push.apple.com";
 const APNS_DEVELOPMENT_HOST = "https://api.sandbox.push.apple.com";
-const APNS_KEY_ID = "Y35ZLFTW8W";
-const APNS_TEAM_ID = "7P8CLHDH5G";
-const APNS_TOPIC = "ad.neko.when";
+function deploymentSetting(name: string, fallback: string): string {
+  const raw = typeof process === "undefined" ? undefined : process.env?.[name];
+  const value = raw?.trim();
+  return value ? value : fallback;
+}
+
+const APNS_KEY_ID = deploymentSetting("APNS_KEY_ID", "Y35ZLFTW8W");
+const APNS_TEAM_ID = deploymentSetting("APNS_TEAM_ID", "7P8CLHDH5G");
+const APNS_TOPIC = deploymentSetting("APNS_TOPIC", "com.harrisliangsu.whenreset");
+
+function apnsPrivateKeyPEM(): string {
+  return deploymentSetting("APNS_PRIVATE_KEY", "") || APNSPrivateKey;
+}
 
 type APNSEnvironment = "development" | "production";
 
@@ -3088,7 +3099,7 @@ function providerDisplayName(providerID: ProviderID): string {
     case "grok": return "Grok";
     case "kimi": return "Kimi Code";
     case "github_copilot": return "GitHub Copilot";
-    case "zai": return "Z.AI Coding Plan";
+    case "zai": return "智谱 GLM";
     case "minimax": return "MiniMax Token Plan";
     case "synthetic": return "Synthetic";
     case "warp": return "Warp";
@@ -3170,6 +3181,7 @@ async function parseAccountUpload(request: Request): Promise<AccountUpload | nul
       expires_at: expiresAt,
       monthly_budget: monthlyBudget,
       currency_code: currencyCode?.toUpperCase() ?? null,
+      ...serviceCredentialFields(rawCredentials),
     },
   };
 }
@@ -5942,7 +5954,7 @@ async function createAPNSAuthorization(): Promise<string> {
   const signingInput = `${header}.${claims}`;
   const key = await crypto.subtle.importKey(
     "pkcs8",
-    pemBytes(APNSPrivateKey),
+    pemBytes(apnsPrivateKeyPEM()),
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"]
@@ -6258,6 +6270,7 @@ async function decryptCredentials(env: Env, row: MonitoredAccountRow): Promise<P
     expires_at: expiresAt,
     monthly_budget: monthlyBudget,
     currency_code: currencyCode?.toUpperCase() ?? null,
+    ...serviceCredentialFields(value),
   };
 }
 
@@ -6317,6 +6330,7 @@ async function decryptRunCredentials(
     expires_at: expiresAt,
     monthly_budget: monthlyBudget,
     currency_code: currencyCode?.toUpperCase() ?? null,
+    ...serviceCredentialFields(value),
   };
 }
 

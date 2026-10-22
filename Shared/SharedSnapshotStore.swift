@@ -1,7 +1,7 @@
 import Foundation
 
 enum SharedSnapshotStore {
-    static let suiteName = "group.ad.neko.when"
+    static var suiteName: String { AppIdentity.appGroupIdentifier }
     private static let snapshotsKey = "usageSnapshots.v1"
 
     static func load() -> [UsageSnapshot] {
@@ -329,7 +329,7 @@ enum UsageHistoryStoreError: LocalizedError {
 actor UsageHistoryStore {
     static let retentionInterval: TimeInterval = 35 * 24 * 60 * 60
     static let pendingNotificationLifetime: TimeInterval = 24 * 60 * 60
-    static let refreshTaskIdentifier = "ad.neko.when.refresh"
+    static var refreshTaskIdentifier: String { AppIdentity.refreshTaskIdentifier }
 
     private let fileURL: URL
     private var cachedArchive: UsageHistoryArchive?

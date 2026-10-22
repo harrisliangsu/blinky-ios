@@ -2168,10 +2168,11 @@ final class AppStore {
     }
 
     @discardableResult
-    func addZAIAccount(apiKey: String, replacing relinkingAccount: MonitoredAccount? = nil) async -> Bool {
+    func addZAIAccount(apiKey: String, region: ZAIRegion = .automatic,
+                       replacing relinkingAccount: MonitoredAccount? = nil) async -> Bool {
         isLinking = true; errorMessage = nil
         do {
-            let identity = try await zaiProvider.link(apiKey: apiKey)
+            let identity = try await zaiProvider.link(apiKey: apiKey, region: region)
             if let relinkingAccount, relinkingAccount.isRemoteOnly {
                 try await replaceRemoteWorkerCredential(
                     for: relinkingAccount,
@@ -2589,7 +2590,12 @@ final class AppStore {
                 }
                 snapshot = try await copilotProvider.fetchUsage(account: effectiveAccount, credentials: credentials)
             case .zai:
-                snapshot = try await zaiProvider.fetchUsage(account: effectiveAccount, credentials: credentials)
+                let fetched = try await zaiProvider.fetchUsage(account: effectiveAccount, credentials: credentials)
+                if fetched.credentials != credentials {
+                    try KeychainStore.save(fetched.credentials, for: account.id)
+                    credentials = fetched.credentials
+                }
+                snapshot = fetched.snapshot
             case .miniMax:
                 snapshot = try await miniMaxProvider.fetchUsage(account: effectiveAccount, credentials: credentials)
             case .synthetic:
