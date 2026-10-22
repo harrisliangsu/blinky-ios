@@ -1,0 +1,19 @@
+# Changelog / 更新说明
+
+## 1.6
+
+### 中文
+
+- 智谱 GLM Coding Plan 增加中国大陆主机 `https://open.bigmodel.cn`，与国际站 `https://api.z.ai` 使用同一额度路径 `/api/monitor/usage/quota/limit`。HTTP 200 上的 `code` / `success` 信封也会被识别。添加账号时可选择自动、Global 或中国大陆；成功的主机按账号保存，避免区域不匹配的 key 反复打到另一台主机。
+- Grok 对齐 Pulse 的每周额度池：设备码 scope 仅为 `openid email offline_access grok-cli:access`，读取 `/v1/billing?format=credits` 与 `/v1/settings`，请求头 `x-xai-token-auth: xai-grok-cli`，并刷新大约 6 小时的访问令牌。
+- ChatGPT / Codex、Kimi Code、智谱 GLM、Grok 的额度窗口进入主屏幕小组件、锁屏小组件和 Live Activity，并带上各自的供应商标记。
+- Bundle ID、Widget ID、App Group 和 Team ID 改为可配置，默认使用 Harris 的前缀 `com.harrisliangsu.whenreset`，不再使用上游 `ad.neko.when`。
+- macOS GitHub Actions：PR 上运行 xcodegen、模拟器测试和未签名构建，不需要 Apple 密钥。版本标签 `v*` 会归档并上传 TestFlight；缺少密钥时工作流会列出缺失项并停止。
+
+### English
+
+- 智谱 GLM Coding Plan now accepts the mainland host `https://open.bigmodel.cn` as well as `https://api.z.ai`. Both use `/api/monitor/usage/quota/limit`, including the `code` / `success` envelope on HTTP 200. The add-account screen can choose Automatic, Global, or 中国大陆, and the host that accepts the key is stored on that account.
+- Grok follows Pulse's weekly credit pool: device-code scopes `openid email offline_access grok-cli:access`, `GET /v1/billing?format=credits` and `/v1/settings` with `x-xai-token-auth: xai-grok-cli`, and refresh of the roughly six-hour access token.
+- ChatGPT / Codex, Kimi Code, 智谱 GLM, and Grok quota windows feed Home Screen widgets, Lock Screen widgets, and Live Activity, with each provider's mark.
+- Bundle ID, widget ID, App Group, and Team ID are configurable. Defaults use the Harris-owned prefix `com.harrisliangsu.whenreset` instead of upstream `ad.neko.when`.
+- macOS GitHub Actions runs xcodegen, simulator tests, and an unsigned build on pull requests without Apple secrets. A `v*` tag archives and uploads to TestFlight, and stops with the missing secret names when those secrets are absent.

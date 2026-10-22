@@ -1,31 +1,79 @@
 import CryptoKit
 import Foundation
 
+enum ZAIRegion: String, Codable, CaseIterable, Identifiable, Sendable {
+    case automatic
+    case global
+    case mainland
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: "Automatic · 自动"
+        case .global: "Global · Z.AI"
+        case .mainland: "中国大陆 · 智谱 BigModel"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .automatic:
+            "Try api.z.ai, then open.bigmodel.cn, and remember the host that accepts this key."
+        case .global:
+            "International Z.AI only (api.z.ai). A mainland 智谱 key is not sent to the other host."
+        case .mainland:
+            "中国大陆智谱 BigModel only (open.bigmodel.cn). An international key is not sent to the other host."
+        }
+    }
+}
+
 enum ZAIProviderError: LocalizedError {
     case invalidAPIKey
     case invalidResponse
     case noResettableQuota
-    case authorizationFailed
+    case authorizationFailed(String)
     case server(Int, String)
 
     var errorDescription: String? {
         switch self {
         case .invalidAPIKey:
-            "Enter a valid Z.AI Coding Plan API key."
+            "Enter a valid 智谱 GLM / Z.AI Coding Plan API key."
         case .invalidResponse:
-            "Z.AI returned unreadable Coding Plan quota data."
+            "智谱 GLM returned unreadable Coding Plan quota data."
         case .noResettableQuota:
-            "Z.AI did not report any resettable Coding Plan limits for this key."
-        case .authorizationFailed:
-            "Z.AI rejected this API key. Check that it belongs to an active Coding Plan."
+            "智谱 GLM did not report any resettable Coding Plan limits for this key."
+        case let .authorizationFailed(host):
+            Self.authorizationMessage(host: host)
         case let .server(code, message):
-            "Z.AI request failed (HTTP \(code)): \(message)"
+            "智谱 GLM request failed (HTTP \(code)): \(message)"
+        }
+    }
+
+    private static func authorizationMessage(host: String) -> String {
+        switch host {
+        case ZAIProvider.mainlandHost:
+            "智谱 BigModel (open.bigmodel.cn) rejected this key. If it is a Z.AI international key, choose Global or Automatic."
+        case ZAIProvider.globalHost:
+            "Z.AI (api.z.ai) rejected this key. If it is a 智谱 mainland key, choose 中国大陆 · BigModel or Automatic."
+        default:
+            "Neither api.z.ai nor open.bigmodel.cn accepted this Coding Plan key. Check that it belongs to an active 智谱 GLM / Z.AI Coding Plan."
         }
     }
 }
 
+struct ZAIUsageResult: Sendable {
+    var snapshot: UsageSnapshot
+    var credentials: AccountCredentials
+}
+
 struct ZAIProvider {
-    static let quotaURL = URL(string: "https://api.z.ai/api/monitor/usage/quota/limit")!
+    static let providerTitle = "智谱 GLM"
+    static let globalHost = "api.z.ai"
+    static let mainlandHost = "open.bigmodel.cn"
+    static let quotaPath = "/api/monitor/usage/quota/limit"
+    static let globalQuotaURL = URL(string: "https://api.z.ai/api/monitor/usage/quota/limit")!
+    static let mainlandQuotaURL = URL(string: "https://open.bigmodel.cn/api/monitor/usage/quota/limit")!
 
     private let session: URLSession
 
@@ -33,41 +81,61 @@ struct ZAIProvider {
         self.session = session
     }
 
-    func link(apiKey rawAPIKey: String) async throws -> LinkedIdentity {
-        let apiKey = rawAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard apiKey.count >= 12, !apiKey.contains(where: { $0.isWhitespace }) else {
-            throw ZAIProviderError.invalidAPIKey
-        }
-
+    func link(apiKey rawAPIKey: String, region: ZAIRegion = .automatic) async throws -> LinkedIdentity {
+        let apiKey = try Self.normalizedKey(rawAPIKey)
         let account = MonitoredAccount(
             id: UUID(),
             providerID: .zai,
-            displayName: "Z.AI account",
+            displayName: Self.providerTitle,
             workspaceID: "pending",
             plan: nil,
             addedAt: .now
         )
-        let data = try await quotaData(apiKey: apiKey)
-        let snapshot = try Self.parseUsage(account: account, data: data)
+        let result = try await load(
+            account: account,
+            credentials: AccountCredentials(
+                accessToken: apiKey,
+                refreshToken: "",
+                idToken: "",
+                serviceRegion: region.rawValue
+            )
+        )
         let digest = SHA256.hash(data: Data(apiKey.utf8))
         let fingerprint = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
 
         return LinkedIdentity(
             workspaceID: "zai-\(fingerprint)",
-            displayName: "Z.AI account",
-            plan: snapshot.plan ?? "Coding Plan",
-            credentials: AccountCredentials(
-                accessToken: apiKey,
-                refreshToken: "",
-                idToken: "",
-                expiresAt: nil
-            )
+            displayName: Self.providerTitle,
+            plan: result.snapshot.plan ?? "Coding Plan",
+            credentials: result.credentials
         )
     }
 
-    func fetchUsage(account: MonitoredAccount, credentials: AccountCredentials) async throws -> UsageSnapshot {
-        let data = try await quotaData(apiKey: credentials.accessToken)
-        return try Self.parseUsage(account: account, data: data)
+    func fetchUsage(account: MonitoredAccount, credentials: AccountCredentials) async throws -> ZAIUsageResult {
+        try await load(account: account, credentials: credentials)
+    }
+
+    static func candidateURLs(region: ZAIRegion, pinnedHost: String?) -> [URL] {
+        if let pinned = quotaURL(forHost: pinnedHost) {
+            return [pinned]
+        }
+        switch region {
+        case .global: return [globalQuotaURL]
+        case .mainland: return [mainlandQuotaURL]
+        case .automatic: return [globalQuotaURL, mainlandQuotaURL]
+        }
+    }
+
+    static func quotaURL(forHost host: String?) -> URL? {
+        switch host?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case globalHost, globalQuotaURL.absoluteString: globalQuotaURL
+        case mainlandHost, mainlandQuotaURL.absoluteString: mainlandQuotaURL
+        default: nil
+        }
+    }
+
+    static func region(from credentials: AccountCredentials) -> ZAIRegion {
+        ZAIRegion(rawValue: credentials.serviceRegion ?? "") ?? .automatic
     }
 
     static func parseUsage(account: MonitoredAccount, data: Data, now: Date = .now) throws -> UsageSnapshot {
@@ -108,8 +176,10 @@ struct ZAIProvider {
 
         return UsageSnapshot(
             accountID: account.id,
-            providerName: "Z.AI Coding Plan",
+            providerName: providerTitle,
             accountName: account.displayName,
+            accountProviderID: account.providerID,
+            accountSymbolName: account.customSymbolName,
             plan: plan,
             primary: fiveHour,
             secondary: weekly,
@@ -120,22 +190,74 @@ struct ZAIProvider {
         )
     }
 
-    private func quotaData(apiKey: String) async throws -> Data {
-        var request = URLRequest(url: Self.quotaURL)
+    private func load(account: MonitoredAccount, credentials: AccountCredentials) async throws -> ZAIUsageResult {
+        let apiKey = try Self.normalizedKey(credentials.accessToken)
+        let region = Self.region(from: credentials)
+        let urls = Self.candidateURLs(region: region, pinnedHost: credentials.serviceHost)
+        var mostRecentRetryableError: Error?
+
+        for url in urls {
+            do {
+                let data = try await quotaData(apiKey: apiKey, url: url)
+                let snapshot = try Self.parseUsage(account: account, data: data)
+                var pinned = credentials
+                pinned.accessToken = apiKey
+                pinned.serviceRegion = region.rawValue
+                pinned.serviceHost = url.absoluteString
+                return ZAIUsageResult(snapshot: snapshot, credentials: pinned)
+            } catch let error as ZAIProviderError {
+                switch error {
+                case .authorizationFailed, .invalidResponse:
+                    mostRecentRetryableError = error
+                    if urls.count == 1 { throw error }
+                case .invalidAPIKey, .noResettableQuota, .server:
+                    throw error
+                }
+            }
+        }
+
+        throw mostRecentRetryableError ?? ZAIProviderError.authorizationFailed("both")
+    }
+
+    private func quotaData(apiKey: String, url: URL) async throws -> Data {
+        var request = URLRequest(url: url)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await session.data(for: request)
-        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-        switch code {
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let host = url.host ?? "both"
+        switch status {
         case 200..<300:
-            return data
+            if Self.envelopeAccepted(data) { return data }
+            throw ZAIProviderError.authorizationFailed(host)
         case 401, 403:
-            throw ZAIProviderError.authorizationFailed
+            throw ZAIProviderError.authorizationFailed(host)
+        case 404, 405:
+            throw ZAIProviderError.authorizationFailed(host)
         default:
-            throw ZAIProviderError.server(code, Self.safeServerMessage(data))
+            throw ZAIProviderError.server(status, Self.safeServerMessage(data))
         }
+    }
+
+    private static func normalizedKey(_ rawAPIKey: String) throws -> String {
+        let apiKey = rawAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard apiKey.count >= 12, !apiKey.contains(where: { $0.isWhitespace }) else {
+            throw ZAIProviderError.invalidAPIKey
+        }
+        return apiKey
+    }
+
+    /// Zhipu and Z.AI answer with a `code` / `success` envelope even when HTTP is 200.
+    /// A non-success envelope is a wrong-region or wrong-key reply, not quota data.
+    static func envelopeAccepted(_ data: Data) -> Bool {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return false
+        }
+        if (root["success"] as? Bool) == false { return false }
+        if let code = integer(root["code"]), code != 200 { return false }
+        return root["data"] is [String: Any]
     }
 
     private static func usageWindow(_ raw: [String: Any], now: Date) -> UsageWindow? {

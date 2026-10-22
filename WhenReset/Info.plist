@@ -6,18 +6,20 @@
   <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleDisplayName</key><string>When Reset</string>
+  <key>WhenResetBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>AppGroupIdentifier</key><string>$(APP_GROUP_IDENTIFIER)</string>
   <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>NSCameraUsageDescription</key><string>Scan a QR code from your self-hosted When Reset Worker.</string>
   <key>CFBundleURLTypes</key><array>
     <dict>
-      <key>CFBundleURLName</key><string>ad.neko.when.worker-link</string>
+      <key>CFBundleURLName</key><string>$(PRODUCT_BUNDLE_IDENTIFIER).worker-link</string>
       <key>CFBundleURLSchemes</key><array><string>whenreset</string></array>
     </dict>
   </array>
   <key>BGTaskSchedulerPermittedIdentifiers</key><array>
-    <string>ad.neko.when.refresh</string>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER).refresh</string>
   </array>
   <key>UIBackgroundModes</key><array>
     <string>fetch</string>

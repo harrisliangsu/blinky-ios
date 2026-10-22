@@ -2185,6 +2185,7 @@ private struct MacAddAccountView: View {
 
     @State private var selectedProvider: ProviderID?
     @State private var secret = ""
+    @State private var zaiRegion: ZAIRegion = .automatic
     @State private var endpoint = ""
     @State private var providerName = ""
     @State private var callback = ""
@@ -2596,11 +2597,21 @@ private struct MacAddAccountView: View {
             }
             SecureField(provider.rawValue == "ollama_cloud" ? "Session cookie" : "API key", text: $secret)
                 .textFieldStyle(.roundedBorder)
+            if provider == .zai {
+                Picker("Region · 区域", selection: $zaiRegion) {
+                    ForEach(ZAIRegion.allCases) { region in
+                        Text(region.title).tag(region)
+                    }
+                }
+                Text(zaiRegion.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Button("Connect \(provider.displayName)") {
                 completionTask = Task {
                     let success: Bool
                     switch provider.rawValue {
-                    case "zai": success = await store.addZAIAccount(apiKey: secret,
+                    case "zai": success = await store.addZAIAccount(apiKey: secret, region: zaiRegion,
                                                                      replacing: relinkingAccount)
                     case "minimax": success = await store.addMiniMaxAccount(apiKey: secret,
                                                                              replacing: relinkingAccount)

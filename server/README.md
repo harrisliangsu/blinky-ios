@@ -167,7 +167,7 @@ Like [Bark Server](https://github.com/Finb/bark-server), this repository bundles
 - Service: Apple Push Notification service (APNs) only
 - Environment: Production only
 - Restriction: Topic Specific
-- Sole topic: `ad.neko.when`
+- Vendored key topic: `ad.neko.when` (upstream). This fork's default advertised topic is `com.harrisliangsu.whenreset` (`APNS_TOPIC`). The vendored key cannot deliver to that topic; set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` from Harris's Apple team.
 
 It is not an App Store Connect API key and grants no access to Apple accounts, apps, builds, signing assets, analytics, DeviceCheck, WeatherKit, or any other bundle ID or service. Apple’s topic-specific keys are explicitly limited to their selected topics and environment.
 

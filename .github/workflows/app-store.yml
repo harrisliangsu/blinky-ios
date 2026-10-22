@@ -1,10 +1,9 @@
 name: App Store Release
 
 on:
-  schedule:
-    - cron: "0 0 * * *"
   push:
     tags:
+      - "v*"
       - testflight-*
   workflow_dispatch:
     inputs:
@@ -68,7 +67,10 @@ jobs:
         if: steps.release_guard.outputs.should_release == 'true'
         id: version
         run: |
-          marketing_version=$(awk '/MARKETING_VERSION = / { gsub(";", "", $3); print $3; exit }' WhenReset.xcodeproj/project.pbxproj)
+          marketing_version=$(awk '/MARKETING_VERSION = / { gsub(/[";]/, "", $3); print $3; exit }' WhenReset.xcodeproj/project.pbxproj)
+          if [[ -z "$marketing_version" ]]; then
+            marketing_version=$(awk '/^MARKETING_VERSION[[:space:]]*=/ { print $3; exit }' Config/WhenReset.xcconfig)
+          fi
           if [[ -z "$marketing_version" ]]; then
             echo "Could not read MARKETING_VERSION." >&2
             exit 1
@@ -82,9 +84,15 @@ jobs:
           PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" ]]; then
-            echo "Required App Store Connect secrets are missing." >&2
+          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "TestFlight upload is blocked until these GitHub Actions secrets exist:" >&2
+            [[ -z "$KEY_ID" ]] && echo " - APP_STORE_CONNECT_KEY_ID" >&2
+            [[ -z "$ISSUER_ID" ]] && echo " - APP_STORE_CONNECT_ISSUER_ID" >&2
+            [[ -z "$PRIVATE_KEY" ]] && echo " - APP_STORE_CONNECT_PRIVATE_KEY" >&2
+            [[ -z "$APPLE_TEAM_ID" ]] && echo " - APPLE_TEAM_ID" >&2
+            echo "See README.md for the Apple Developer setup these secrets belong to." >&2
             exit 1
           fi
           key_path="$RUNNER_TEMP/AuthKey_${KEY_ID}.p8"
@@ -99,7 +107,7 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_BUNDLE_ID: ad.neko.when
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
           MARKETING_VERSION: ${{ steps.version.outputs.marketing_version }}
           RELEASE_PLATFORMS: ${{ github.event_name == 'schedule' && 'IOS' || inputs.platform == 'both' && 'IOS,MAC_OS' || inputs.platform == 'macos' && 'MAC_OS' || 'IOS' }}
         run: ruby .github/scripts/next-app-store-build.rb
@@ -130,6 +138,12 @@ jobs:
       - name: Verify toolchain
         run: xcodebuild -version
 
+      - name: Generate the Xcode project
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          brew install xcodegen
+          xcodegen generate --spec project.yml
+
       - name: Set up encrypted diagnostics runtime
         if: vars.RELEASE_DIAGNOSTICS_PUBLIC_KEY != ''
         uses: actions/setup-node@v4
@@ -142,9 +156,15 @@ jobs:
           PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" ]]; then
-            echo "Required App Store Connect secrets are missing." >&2
+          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "TestFlight upload is blocked until these GitHub Actions secrets exist:" >&2
+            [[ -z "$KEY_ID" ]] && echo " - APP_STORE_CONNECT_KEY_ID" >&2
+            [[ -z "$ISSUER_ID" ]] && echo " - APP_STORE_CONNECT_ISSUER_ID" >&2
+            [[ -z "$PRIVATE_KEY" ]] && echo " - APP_STORE_CONNECT_PRIVATE_KEY" >&2
+            [[ -z "$APPLE_TEAM_ID" ]] && echo " - APPLE_TEAM_ID" >&2
+            echo "See README.md for the Apple Developer setup these secrets belong to." >&2
             exit 1
           fi
 
@@ -167,6 +187,11 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_BUNDLE_IDENTIFIER: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
+          WIDGET_BUNDLE_IDENTIFIER: ${{ vars.WIDGET_BUNDLE_IDENTIFIER != '' && vars.WIDGET_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset.widgets' }}
+          APP_GROUP_IDENTIFIER: ${{ vars.APP_GROUP_IDENTIFIER != '' && vars.APP_GROUP_IDENTIFIER || 'group.com.harrisliangsu.whenreset' }}
+          KEYCHAIN_GROUP_SUFFIX: ${{ vars.KEYCHAIN_GROUP_SUFFIX != '' && vars.KEYCHAIN_GROUP_SUFFIX || 'com.harrisliangsu.whenreset.shared' }}
           RELEASE_PLATFORM: ${{ matrix.platform }}
         run: |
           if [[ "$RELEASE_PLATFORM" == "ios" ]]; then
@@ -189,7 +214,13 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGNING_ALLOWED=YES \
+            APP_BUNDLE_IDENTIFIER="$APP_BUNDLE_IDENTIFIER" \
+            WIDGET_BUNDLE_IDENTIFIER="$WIDGET_BUNDLE_IDENTIFIER" \
+            APP_GROUP_IDENTIFIER="$APP_GROUP_IDENTIFIER" \
+            KEYCHAIN_GROUP_SUFFIX="$KEYCHAIN_GROUP_SUFFIX" \
             MARKETING_VERSION='${{ needs.prepare.outputs.marketing_version }}' \
             CURRENT_PROJECT_VERSION='${{ needs.prepare.outputs.build_number }}' \
             "${platform_settings[@]}"
@@ -199,7 +230,7 @@ jobs:
             widget_path="$app_path/Contents/PlugIns/WhenResetWidgets.appex"
             app_entitlements="$RUNNER_TEMP/WhenResetMac.xcent"
             widget_entitlements="$RUNNER_TEMP/WhenResetWidgetsMac.xcent"
-            team_id=7P8CLHDH5G
+            team_id="$APPLE_TEAM_ID"
             app_bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Contents/Info.plist")
             widget_bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$widget_path/Contents/Info.plist")
 
@@ -207,7 +238,9 @@ jobs:
             cp WhenResetWidgets/WhenResetWidgetsMac.entitlements "$widget_entitlements"
 
             /usr/libexec/PlistBuddy -c 'Set :com.apple.developer.aps-environment production' "$app_entitlements"
-            /usr/libexec/PlistBuddy -c "Set :keychain-access-groups:0 ${team_id}.ad.neko.when.shared" "$app_entitlements"
+            /usr/libexec/PlistBuddy -c "Set :com.apple.security.application-groups:0 $APP_GROUP_IDENTIFIER" "$app_entitlements"
+            /usr/libexec/PlistBuddy -c "Set :com.apple.security.application-groups:0 $APP_GROUP_IDENTIFIER" "$widget_entitlements"
+            /usr/libexec/PlistBuddy -c "Set :keychain-access-groups:0 ${team_id}.${KEYCHAIN_GROUP_SUFFIX}" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string ${team_id}.${app_bundle_id}" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string $team_id" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string ${team_id}.${widget_bundle_id}" "$widget_entitlements"
@@ -221,7 +254,7 @@ jobs:
               signed_entitlements="$RUNNER_TEMP/$(basename "$bundle").signed.xcent"
               codesign -d --entitlements :- "$bundle" > "$signed_entitlements" 2>/dev/null
               [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$signed_entitlements")" == "true" ]]
-              [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' "$signed_entitlements")" == "group.ad.neko.when" ]]
+              [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' "$signed_entitlements")" == "$APP_GROUP_IDENTIFIER" ]]
               bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$bundle/Contents/Info.plist")
               [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.application-identifier' "$signed_entitlements")" == "${team_id}.${bundle_id}" ]]
               [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.team-identifier' "$signed_entitlements")" == "$team_id" ]]
@@ -230,7 +263,7 @@ jobs:
             app_signed_entitlements="$RUNNER_TEMP/WhenReset.app.signed.xcent"
             [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.network.client' "$app_signed_entitlements")" == "true" ]]
             [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$app_signed_entitlements")" == "production" ]]
-            [[ "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$app_signed_entitlements")" == "${team_id}.ad.neko.when.shared" ]]
+            [[ "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$app_signed_entitlements")" == "${team_id}.${KEYCHAIN_GROUP_SUFFIX}" ]]
           fi
 
           echo "archive_path=$archive_path" >> "$GITHUB_ENV"
@@ -240,6 +273,7 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           RELEASE_DIAGNOSTICS_PUBLIC_KEY: ${{ vars.RELEASE_DIAGNOSTICS_PUBLIC_KEY }}
           RELEASE_DIAGNOSTICS_DIRECTORY: ${{ runner.temp }}/release-diagnostics
         run: |
@@ -250,7 +284,7 @@ jobs:
           plutil -insert method -string app-store-connect "$export_options"
           plutil -insert destination -string upload "$export_options"
           plutil -insert signingStyle -string automatic "$export_options"
-          plutil -insert teamID -string 7P8CLHDH5G "$export_options"
+          plutil -insert teamID -string "$APPLE_TEAM_ID" "$export_options"
           plutil -insert manageAppVersionAndBuildNumber -bool NO "$export_options"
           plutil -insert uploadSymbols -bool YES "$export_options"
 
@@ -283,7 +317,7 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_BUNDLE_ID: ad.neko.when
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
           TESTFLIGHT_GROUP_NAME: Internal Testers
         run: ruby .github/scripts/assign-testflight-group.rb
 
@@ -324,9 +358,15 @@ jobs:
           PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" ]]; then
-            echo "Required App Store Connect secrets are missing." >&2
+          if [[ -z "$PRIVATE_KEY" || -z "$KEY_ID" || -z "$ISSUER_ID" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "TestFlight upload is blocked until these GitHub Actions secrets exist:" >&2
+            [[ -z "$KEY_ID" ]] && echo " - APP_STORE_CONNECT_KEY_ID" >&2
+            [[ -z "$ISSUER_ID" ]] && echo " - APP_STORE_CONNECT_ISSUER_ID" >&2
+            [[ -z "$PRIVATE_KEY" ]] && echo " - APP_STORE_CONNECT_PRIVATE_KEY" >&2
+            [[ -z "$APPLE_TEAM_ID" ]] && echo " - APPLE_TEAM_ID" >&2
+            echo "See README.md for the Apple Developer setup these secrets belong to." >&2
             exit 1
           fi
           key_path="$RUNNER_TEMP/AuthKey_${KEY_ID}.p8"
@@ -339,7 +379,7 @@ jobs:
           ASC_KEY_PATH: ${{ steps.credential.outputs.path }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_BUNDLE_ID: ad.neko.when
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
           MARKETING_VERSION: ${{ needs.prepare.outputs.marketing_version }}
           BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
           REVIEW_PLATFORMS: ${{ inputs.platform == 'both' && 'IOS,MAC_OS' || inputs.platform == 'macos' && 'MAC_OS' || 'IOS' }}

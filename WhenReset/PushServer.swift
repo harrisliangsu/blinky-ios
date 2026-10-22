@@ -719,6 +719,8 @@ enum PushServerClient {
         var expiresAt: TimeInterval?
         var monthlyBudget: Double?
         var currencyCode: String?
+        var serviceHost: String?
+        var serviceRegion: String?
 
         enum CodingKeys: String, CodingKey {
             case accessToken = "access_token"
@@ -727,6 +729,8 @@ enum PushServerClient {
             case expiresAt = "expires_at"
             case monthlyBudget = "monthly_budget"
             case currencyCode = "currency_code"
+            case serviceHost = "service_host"
+            case serviceRegion = "service_region"
         }
 
         init(_ credentials: AccountCredentials) {
@@ -736,6 +740,8 @@ enum PushServerClient {
             expiresAt = credentials.expiresAt?.timeIntervalSince1970
             monthlyBudget = credentials.monthlyBudget
             currencyCode = credentials.currencyCode
+            serviceHost = credentials.serviceHost
+            serviceRegion = credentials.serviceRegion
         }
 
     }
@@ -1307,7 +1313,7 @@ enum PushServerClient {
                   let metadata = try? JSONDecoder().decode(LinkMetadataResponse.self, from: data),
                   metadata.version == 1,
                   metadata.mode == "self_hosted",
-                  metadata.topic == "ad.neko.when",
+                  metadata.topic == AppIdentity.bundleIdentifier,
                   metadata.displayName.utf8.count <= 128,
                   !metadata.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   metadata.expiresAt.isFinite else {
@@ -1344,7 +1350,7 @@ enum PushServerClient {
                   let health = try? JSONDecoder().decode(HealthResponse.self, from: data),
                   health.ok,
                   health.mode == "self_hosted",
-                  health.topic == "ad.neko.when" else {
+                  health.topic == AppIdentity.bundleIdentifier else {
                 throw PushServerError.workerIdentityMismatch
             }
             return WorkerLinkMetadata(

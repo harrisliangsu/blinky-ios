@@ -1,5 +1,13 @@
 # Third-party notices
 
+## Upstream
+
+When Reset is a fork of [iebb/when-reset](https://github.com/iebb/when-reset). That repository does not ship a LICENSE file. Original code remains attributed to its author.
+
+## Pulse
+
+Grok weekly-pool behavior (device-code scopes, `x-xai-token-auth: xai-grok-cli`, `/v1/billing?format=credits`, `/v1/settings`, and the implicit-zero percentage rule) was checked against [qunqin24/Pulse](https://github.com/qunqin24/Pulse) `Docs/providers/grok.md` and `Sources/Pulse/Providers/GrokUsageService.swift`. Pulse is Apache-2.0. This fork does not copy Pulse source.
+
 ## CodexBar Grok provider icon
 
 The Grok provider SVG is adapted from CodexBar.

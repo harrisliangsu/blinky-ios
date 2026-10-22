@@ -1,20 +1,28 @@
 name: WhenReset
 options:
-  bundleIdPrefix: ad.neko
+  bundleIdPrefix: com.harrisliangsu
   deploymentTarget:
     iOS: "17.0"
+    macOS: "14.0"
   createIntermediateGroups: true
+  groupSortPosition: top
+configFiles:
+  Debug: Config/WhenReset.xcconfig
+  Release: Config/WhenReset.xcconfig
 settings:
   base:
-    SWIFT_VERSION: 6.0
+    SWIFT_VERSION: "6.0"
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: 7P8CLHDH5G
-    MARKETING_VERSION: 1.5
-    CURRENT_PROJECT_VERSION: 5
+    MARKETING_VERSION: "1.6"
+    CURRENT_PROJECT_VERSION: "28"
 targets:
   WhenReset:
     type: application
     platform: iOS
+    supportedDestinations: [iOS, macOS]
+    deploymentTarget:
+      iOS: "17.0"
+      macOS: "14.0"
     attributes:
       SystemCapabilities:
         com.apple.Push:
@@ -24,17 +32,19 @@ targets:
       - path: Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ad.neko.when
+        PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_IDENTIFIER)"
         INFOPLIST_FILE: WhenReset/Info.plist
+        "INFOPLIST_FILE[sdk=macosx*]": WhenReset/Info-Mac.plist
         CODE_SIGN_ENTITLEMENTS: WhenReset/WhenReset.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": WhenReset/WhenResetMac.entitlements
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
       configs:
         Debug:
           APS_ENVIRONMENT: development
         Release:
           APS_ENVIRONMENT: production
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: Apple Distribution
-          PROVISIONING_PROFILE_SPECIFIER: When Reset App Store
     dependencies:
       - target: WhenResetWidgets
     scheme:
@@ -43,20 +53,23 @@ targets:
   WhenResetWidgets:
     type: app-extension
     platform: iOS
+    supportedDestinations: [iOS, macOS]
+    deploymentTarget:
+      iOS: "17.0"
+      macOS: "14.0"
     sources:
       - path: WhenResetWidgets
       - path: Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ad.neko.when.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: "$(WIDGET_BUNDLE_IDENTIFIER)"
         INFOPLIST_FILE: WhenResetWidgets/Info.plist
         CODE_SIGN_ENTITLEMENTS: WhenResetWidgets/WhenResetWidgets.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": WhenResetWidgets/WhenResetWidgetsMac.entitlements
         SKIP_INSTALL: YES
-      configs:
-        Release:
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: Apple Distribution
-          PROVISIONING_PROFILE_SPECIFIER: When Reset Widgets App Store
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
   WhenResetTests:
     type: bundle.unit-test
     platform: iOS
@@ -64,5 +77,6 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_IDENTIFIER).tests"
     dependencies:
       - target: WhenReset

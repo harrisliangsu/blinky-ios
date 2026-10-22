@@ -18,7 +18,45 @@ export type ProviderCredentials = {
   expires_at: number | null;
   monthly_budget?: number | null;
   currency_code?: string | null;
+  service_host?: string | null;
+  service_region?: "automatic" | "global" | "mainland" | null;
 };
+
+export const zaiQuotaURLs = {
+  global: "https://api.z.ai/api/monitor/usage/quota/limit",
+  mainland: "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+} as const;
+
+export function normalizedZAIServiceHost(value: unknown): string | null {
+  const host = typeof value === "string" ? value.trim() : "";
+  if (host === zaiQuotaURLs.global || host === "api.z.ai") return zaiQuotaURLs.global;
+  if (host === zaiQuotaURLs.mainland || host === "open.bigmodel.cn") return zaiQuotaURLs.mainland;
+  return null;
+}
+
+export function normalizedZAIServiceRegion(value: unknown): "automatic" | "global" | "mainland" | null {
+  return value === "automatic" || value === "global" || value === "mainland" ? value : null;
+}
+
+export function zaiCandidateURLs(
+  region: "automatic" | "global" | "mainland" | null,
+  pinnedHost: string | null,
+): string[] {
+  const pinned = normalizedZAIServiceHost(pinnedHost);
+  if (pinned) return [pinned];
+  if (region === "global") return [zaiQuotaURLs.global];
+  if (region === "mainland") return [zaiQuotaURLs.mainland];
+  return [zaiQuotaURLs.global, zaiQuotaURLs.mainland];
+}
+
+export function serviceCredentialFields(value: Record<string, unknown>): Pick<
+  ProviderCredentials, "service_host" | "service_region"
+> {
+  return {
+    service_host: normalizedZAIServiceHost(value.service_host),
+    service_region: normalizedZAIServiceRegion(value.service_region),
+  };
+}
 
 export type ProviderAccount = {
   provider_id: ProviderID;
@@ -127,6 +165,17 @@ export async function fetchProviderUsage(
   }
 }
 
+const grokRequestedScopes = ["openid", "email", "offline_access", "grok-cli:access"];
+
+function grokCLIHeaders(accessToken: string): Record<string, string> {
+  return {
+    authorization: `Bearer ${accessToken}`,
+    "x-xai-token-auth": "xai-grok-cli",
+    accept: "application/json",
+    "user-agent": USER_AGENT,
+  };
+}
+
 async function fetchGrok(
   account: ProviderAccount,
   credentials: ProviderCredentials,
@@ -135,28 +184,35 @@ async function fetchGrok(
   const refreshed = await refreshGrok(credentials, now);
   const value = await getJSON(
     "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
-    {
-      authorization: `Bearer ${refreshed.access_token}`,
-      "x-xai-token-auth": "xai-grok-cli",
-      "x-userid": account.workspace_id,
-      "x-grok-client-version": "1.0.0",
-      "x-grok-client-mode": "headless",
-      accept: "application/json",
-      "user-agent": USER_AGENT,
-    },
+    grokCLIHeaders(refreshed.access_token),
   );
   const parsed = grokBilling(value, now);
+  const settingsPlan = await grokSettingsPlan(refreshed.access_token);
   return {
     credentials: refreshed,
     snapshot: snapshot(
       account.provider_id,
-      parsed.plan ?? grokTierPlan(refreshed.access_token) ?? account.plan,
+      settingsPlan ?? parsed.plan ?? grokTierPlan(refreshed.access_token) ?? account.plan,
       now,
       [parsed.window],
       0,
       [],
     ),
   };
+}
+
+async function grokSettingsPlan(accessToken: string): Promise<string | null> {
+  try {
+    const value = await requestJSON("https://cli-chat-proxy.grok.com/v1/settings", {
+      headers: grokCLIHeaders(accessToken),
+      signal: AbortSignal.timeout(4_000),
+    });
+    const root = asRecord(value);
+    const tier = text(root?.subscription_tier_display)?.trim();
+    return tier || null;
+  } catch {
+    return null;
+  }
 }
 
 async function refreshGrok(
@@ -172,19 +228,14 @@ async function refreshGrok(
     grant_type: "refresh_token",
     refresh_token: credentials.refresh_token,
     client_id: "b1a00492-073a-47ea-816f-4c329264a828",
+    scope: grokRequestedScopes.join(" "),
   });
-  const accessClaims = jwtClaims(credentials.access_token);
-  const principalType = text(accessClaims?.principal_type);
-  const principalID = text(accessClaims?.principal_id);
-  if (principalType) body.set("principal_type", principalType);
-  if (principalID) body.set("principal_id", principalID);
 
   const value = await requestJSON("https://auth.x.ai/oauth2/token", {
     method: "POST",
     headers: {
       accept: "application/json",
       "content-type": "application/x-www-form-urlencoded",
-      "x-grok-client-version": "1.0.0",
       "user-agent": USER_AGENT,
     },
     body: body.toString(),
@@ -208,23 +259,19 @@ function grokBilling(value: unknown, now: number): {
   const root = requiredRecord(value, "Grok returned unreadable billing data.");
   const config = asRecord(root.config);
   if (!config) throw new ProviderFetchError("Grok returned no resettable quota.");
-  const limit = centValue(config.monthlyLimit ?? config.monthly_limit);
-  const used = centValue(config.used);
-  const usedPercent = number(config.creditUsagePercent ?? config.credit_usage_percent)
-    ?? (limit !== null && limit > 0 && used !== null ? used / limit * 100 : null);
-  if (usedPercent === null) throw new ProviderFetchError("Grok returned unreadable billing data.");
-
   const period = asRecord(config.currentPeriod ?? config.current_period);
   const start = timestamp(period?.start ?? config.billingPeriodStart ?? config.billing_period_start);
   const end = timestamp(period?.end ?? config.billingPeriodEnd ?? config.billing_period_end);
-  if (end === null || end <= now) throw new ProviderFetchError("Grok returned no resettable quota.");
-  const duration = start !== null ? Math.max(1, Math.round((end - start) / 60)) : null;
-  const periodType = text(period?.type)?.toUpperCase();
-  const periodCode = integer(period?.type);
-  const weekly = periodType?.includes("WEEKLY") === true || periodCode === 1
-    || (duration !== null && duration >= 9_000 && duration <= 11_000);
-  const monthly = periodType?.includes("MONTHLY") === true || periodCode === 2
-    || (duration !== null && duration >= 38_000 && duration <= 46_000);
+  if (start === null || end === null || end <= start || end <= now) {
+    throw new ProviderFetchError("Grok returned no resettable quota.");
+  }
+  const reported = number(config.creditUsagePercent ?? config.credit_usage_percent);
+  const usedPercent = reported ?? (now >= start && now <= end ? 0 : null);
+  if (usedPercent === null) throw new ProviderFetchError("Grok returned no resettable quota.");
+
+  const seconds = Math.round(end - start);
+  const weekly = seconds >= 6 * 86_400 && seconds <= 8 * 86_400;
+  const monthly = seconds >= 27 * 86_400 && seconds <= 32 * 86_400;
   const title = weekly ? "Weekly limit" : monthly ? "Monthly limit" : "Coding limit";
   const id = weekly ? "grok:weekly" : monthly ? "grok:monthly" : "grok:coding";
   const plan = firstText(root, ["subscriptionTier", "subscription_tier", "plan"]);
@@ -234,17 +281,12 @@ function grokBilling(value: unknown, now: number): {
       id,
       title,
       weekly ? "weekly" : "additional",
-      weekly ? 10_080 : duration,
+      Math.max(1, Math.round(seconds / 60)),
       100 - clamp(usedPercent),
       end,
     ),
     plan: plan ? displayGrokPlan(plan) : null,
   };
-}
-
-function centValue(value: unknown): number | null {
-  const root = asRecord(value);
-  return root ? number(root.val) : number(value);
 }
 
 function grokTierPlan(token: string): string | null {
@@ -1137,16 +1179,45 @@ async function fetchZAI(
   credentials: ProviderCredentials,
   now: number,
 ): Promise<ProviderFetchResult> {
-  const value = await getJSON("https://api.z.ai/api/monitor/usage/quota/limit", {
-    authorization: `Bearer ${credentials.access_token}`,
-    accept: "application/json",
-    "user-agent": USER_AGENT,
-  });
-  const root = requiredRecord(value, "Z.AI returned unreadable quota data.");
+  const region = normalizedZAIServiceRegion(credentials.service_region);
+  const urls = zaiCandidateURLs(region, credentials.service_host ?? null);
+  let lastError: unknown;
+  for (const url of urls) {
+    try {
+      const value = await getJSON(url, {
+        authorization: `Bearer ${credentials.access_token}`,
+        accept: "application/json",
+        "user-agent": USER_AGENT,
+      });
+      const parsed = zaiQuotaSnapshot(value, account, now);
+      return {
+        credentials: {
+          ...credentials,
+          service_host: url,
+          service_region: region ?? "automatic",
+        },
+        snapshot: parsed,
+      };
+    } catch (error) {
+      lastError = error;
+      const status = error instanceof ProviderFetchError ? error.status : 0;
+      const retryable = status === 401 || status === 403 || status === 404 || status === 405;
+      if (!retryable || urls.length === 1) throw error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new ProviderFetchError("智谱 GLM quota request failed.");
+}
+
+function zaiQuotaSnapshot(
+  value: unknown,
+  account: ProviderAccount,
+  now: number,
+): ProviderSnapshot {
+  const root = requiredRecord(value, "智谱 GLM returned unreadable quota data.");
   const payload = asRecord(root.data);
   const limits = asRecords(payload?.limits);
   if (integer(root.code) !== 200 || root.success === false || !payload || !limits) {
-    throw new ProviderFetchError("Z.AI returned unreadable quota data.");
+    throw new ProviderFetchError("智谱 GLM rejected this key for the selected region.", 401);
   }
   const candidates = limits.map((item) => zaiWindow(item, 0, now))
     .filter((item): item is ProviderUsageWindow => item !== null);
@@ -1155,9 +1226,9 @@ async function fetchZAI(
   const selected = [fiveHour, weekly, ...candidates.filter((item) => item !== fiveHour && item !== weekly)]
     .filter((item): item is ProviderUsageWindow => item !== undefined)
     .map((item, position) => ({ ...item, position }));
-  if (selected.length === 0) throw new ProviderFetchError("Z.AI returned no resettable quota.");
+  if (selected.length === 0) throw new ProviderFetchError("智谱 GLM returned no resettable quota.", 422);
   const plan = text(payload.planName ?? payload.plan ?? payload.plan_type ?? payload.packageName) ?? account.plan;
-  return { credentials, snapshot: snapshot(account.provider_id, plan, now, selected, 0, []) };
+  return snapshot(account.provider_id, plan, now, selected, 0, []);
 }
 
 function zaiWindow(raw: Record<string, unknown>, position: number, now: number): ProviderUsageWindow | null {
@@ -1686,4 +1757,6 @@ export const providerTesting = {
   syntheticWindows,
   warpWindow,
   zaiWindow,
+  zaiCandidateURLs,
+  normalizedZAIServiceHost,
 };

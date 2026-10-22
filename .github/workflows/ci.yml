@@ -72,6 +72,12 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Generate the Xcode project
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          brew install xcodegen
+          xcodegen generate --spec project.yml
+
       - name: Run iOS unit tests
         run: |
           run_tests() {
@@ -82,7 +88,9 @@ jobs:
               -configuration Debug \
               -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
               -derivedDataPath "$RUNNER_TEMP/DerivedData-iOS-Tests" \
-              -resultBundlePath "$RUNNER_TEMP/WhenResetTests-${attempt}.xcresult"
+              -resultBundlePath "$RUNNER_TEMP/WhenResetTests-${attempt}.xcresult" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO
           }
 
           set +e
