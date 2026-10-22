@@ -61,7 +61,7 @@ OAuth succeeds.
 
 GitHub Actions replaces Xcode Cloud for this repository:
 
-- `CI` runs on every pull request and push to `master`. On a macOS runner it installs XcodeGen, regenerates the project, runs the iOS unit tests, and builds unsigned iOS and universal macOS release configurations. It does not need Apple secrets. The Worker and Linux server jobs stay on Ubuntu.
+- `CI` runs on every pull request and push to `master`. On a macOS runner it installs XcodeGen, regenerates the project, runs the iOS unit tests, and builds unsigned iOS and universal macOS release configurations. Simulator tests are ad-hoc signed on the runner so Keychain tests can run; that signature does not use an Apple team. The job does not need Apple secrets. The Worker and Linux server jobs stay on Ubuntu.
 - `App Store Release` archives and uploads an iOS TestFlight build when a version tag `v*` (or `testflight-*`) is pushed, and supports a manual iOS/macOS dispatch. It uses Xcode automatic signing with an App Store Connect API key. If the secrets below are missing, that workflow stops before archiving and names the missing secrets. Pull-request CI still passes.
 
 ### TestFlight secrets and Apple-side setup
@@ -88,7 +88,7 @@ Apple Developer steps before the first signed upload:
 
 Push from the self-hosted server is separate. The vendored APNs key under `server/apns/` is the upstream author's production key and is topic-specific to `ad.neko.when`. It cannot send to `com.harrisliangsu.whenreset`. For Harris's bundle, set `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC` (`com.harrisliangsu.whenreset`), and `APNS_PRIVATE_KEY` (the `.p8` contents) in the server environment, using a key created for Harris's team.
 
-中文对照：PR 上的 CI 不需要 Apple 密钥，会跑模拟器测试和未签名构建。打上 `v*` 版本标签后，TestFlight 工作流才会签名上传；缺上面四个 secret 时，该工作流会直接失败并列出缺哪几个，不会假成功。开发者网站要先建好 App ID、Widget ID、App Group，并打开主 App 的 Push Notifications。上游的 APNs 密钥不能给这个新 Bundle ID 发推送。
+中文对照：PR 上的 CI 不需要 Apple 密钥。模拟器测试在 runner 上做 ad-hoc 签名，这样钥匙串测试才能通过；Release 构建保持未签名。打上 `v*` 版本标签后，TestFlight 工作流才会用 Apple 团队签名上传；缺上面四个 secret 时，该工作流会直接失败并列出缺哪几个，不会假成功。开发者网站要先建好 App ID、Widget ID、App Group，并打开主 App 的 Push Notifications。上游的 APNs 密钥不能给这个新 Bundle ID 发推送。
 
 Release preparation checks App Store Connect before archiving. It treats the checked-in
 marketing version as a minimum: if Apple has approved that version on a selected platform,

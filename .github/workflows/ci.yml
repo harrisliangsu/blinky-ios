@@ -82,6 +82,8 @@ jobs:
         run: |
           run_tests() {
             local attempt="$1"
+            # Ad-hoc identity so simulator Keychain tests run. An unsigned host
+            # returns OSStatus -34018. This does not use an Apple team or secret.
             xcodebuild test \
               -project WhenReset.xcodeproj \
               -scheme WhenReset \
@@ -89,8 +91,12 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
               -derivedDataPath "$RUNNER_TEMP/DerivedData-iOS-Tests" \
               -resultBundlePath "$RUNNER_TEMP/WhenResetTests-${attempt}.xcresult" \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGNING_REQUIRED=NO
+              CODE_SIGN_STYLE=Manual \
+              "CODE_SIGN_IDENTITY=-" \
+              CODE_SIGNING_ALLOWED=YES \
+              CODE_SIGNING_REQUIRED=YES \
+              DEVELOPMENT_TEAM= \
+              PROVISIONING_PROFILE_SPECIFIER=
           }
 
           set +e
