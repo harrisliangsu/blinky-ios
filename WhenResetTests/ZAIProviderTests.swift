@@ -47,7 +47,8 @@ final class ZAIProviderTests: XCTestCase {
 
         let snapshot = try ZAIProvider.parseUsage(account: account, data: data, now: now)
 
-        XCTAssertEqual(snapshot.providerName, "Z.AI Coding Plan")
+        XCTAssertEqual(snapshot.providerName, "智谱 GLM")
+        XCTAssertEqual(snapshot.accountProviderID, .zai)
         XCTAssertEqual(snapshot.plan, "Pro")
         XCTAssertEqual(snapshot.primary?.metricID, "zai:five_hour")
         XCTAssertEqual(snapshot.primary?.windowMinutes, 300)
@@ -93,5 +94,39 @@ final class ZAIProviderTests: XCTestCase {
                                        workspaceID: "zai-test", plan: nil, addedAt: .now)
 
         XCTAssertThrowsError(try ZAIProvider.parseUsage(account: account, data: data))
+    }
+
+    func testHTTPSuccessEnvelopeWithoutQuotaIsNotAccepted() {
+        XCTAssertFalse(ZAIProvider.envelopeAccepted(Data(#"{"code":401,"success":false,"msg":"invalid api key"}"#.utf8)))
+        XCTAssertFalse(ZAIProvider.envelopeAccepted(Data(#"{"code":200,"success":true}"#.utf8)))
+        XCTAssertTrue(ZAIProvider.envelopeAccepted(Data(#"{"code":200,"success":true,"data":{"limits":[]}}"#.utf8)))
+    }
+
+    func testRegionSelectionPinsOneHostAndAutomaticTriesBothUntilPinned() {
+        XCTAssertEqual(
+            ZAIProvider.candidateURLs(region: .automatic, pinnedHost: nil).map(\.host),
+            ["api.z.ai", "open.bigmodel.cn"]
+        )
+        XCTAssertEqual(
+            ZAIProvider.candidateURLs(region: .mainland, pinnedHost: nil).map(\.absoluteString),
+            ["https://open.bigmodel.cn/api/monitor/usage/quota/limit"]
+        )
+        XCTAssertEqual(
+            ZAIProvider.candidateURLs(region: .global, pinnedHost: nil).map(\.host),
+            ["api.z.ai"]
+        )
+        XCTAssertEqual(
+            ZAIProvider.candidateURLs(
+                region: .automatic,
+                pinnedHost: "https://open.bigmodel.cn/api/monitor/usage/quota/limit"
+            ).map(\.host),
+            ["open.bigmodel.cn"]
+        )
+        XCTAssertEqual(
+            ZAIProvider.candidateURLs(region: .automatic, pinnedHost: "https://evil.example/quota"),
+            [ZAIProvider.globalQuotaURL, ZAIProvider.mainlandQuotaURL]
+        )
+        XCTAssertEqual(ProviderID.zai.displayName, "智谱 GLM")
+        XCTAssertEqual(ProviderID.zai.logoAssetName, "ZAILogo")
     }
 }

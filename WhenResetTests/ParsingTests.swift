@@ -1831,7 +1831,7 @@ final class ParsingTests: XCTestCase {
             for: CopilotProviderError.relinkRequired
         ))
         XCTAssertTrue(AccountRefreshFailure.requiresReauthentication(
-            for: ZAIProviderError.authorizationFailed
+            for: ZAIProviderError.authorizationFailed("api.z.ai")
         ))
     }
 
