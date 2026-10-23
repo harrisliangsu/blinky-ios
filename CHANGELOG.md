@@ -1,5 +1,15 @@
 # Changelog / 更新说明
 
+## 1.8
+
+### 中文
+
+- 主屏幕、设置和 App Store 图标改为与 Mac 相同的 Blinky 吉祥物：深海军蓝底、奶油色绒毛、黄绿色耳尖和头顶嫩芽、眨眼。源图本身已带圆角；iOS 资源改为铺满画布的不透明方形，只由系统遮罩裁一次圆角，避免套两层圆角把图案缩小。Bundle ID、Widget ID 和 App Group 不变，仍是 `com.harrisliangsu.whenreset`。
+
+### English
+
+- The Home Screen, Settings, and App Store icon now matches the Mac Blinky mascot: dark navy ground, cream fluff, lime ear tips and sprout, winking. The source art already includes a squircle, so the iOS asset is a full-bleed opaque square and the system mask rounds it once. That avoids a second rounding pass shrinking the artwork. Bundle ID, widget ID, and App Group stay `com.harrisliangsu.whenreset`.
+
 ## 1.7
 
 ### 中文
