@@ -33,7 +33,7 @@ enum AdditionalProviderError: LocalizedError {
         case .stateMismatch:
             "Google returned a callback for a different Antigravity sign-in attempt. Start again."
         case let .responseTooLarge(provider):
-            "\(provider) returned more quota data than When Reset can safely process."
+            "\(provider) returned more quota data than Blinky can safely process."
         case let .server(provider, code):
             "\(provider) request failed (HTTP \(code))."
         }

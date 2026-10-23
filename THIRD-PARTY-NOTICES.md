@@ -2,7 +2,7 @@
 
 ## Upstream
 
-When Reset is a fork of [iebb/when-reset](https://github.com/iebb/when-reset). That repository does not ship a LICENSE file. Original code remains attributed to its author.
+Blinky is Harris Liang's fork of upstream [When Reset (iebb/when-reset)](https://github.com/iebb/when-reset), published at [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios). That upstream repository does not ship a LICENSE file. Original code remains attributed to its author.
 
 ## Pulse
 

@@ -276,7 +276,7 @@ private struct WidgetMetricTarget: Hashable, Sendable {
             guard let expiresAt else { return valueLabel }
             return "\(valueLabel). Expiry date \(expiresAt.formatted(date: .abbreviated, time: .shortened))."
         case .apiBalance:
-            guard let balance = apiBalance else { return "Balance unavailable. Open When Reset to refresh." }
+            guard let balance = apiBalance else { return "Balance unavailable. Open Blinky to refresh." }
             var result = balance.widgetValueLabel
             if let periodEnd = balance.periodEnd {
                 result += ". Period ends \(periodEnd.formatted(date: .abbreviated, time: .shortened))"
@@ -286,7 +286,7 @@ private struct WidgetMetricTarget: Hashable, Sendable {
             }
             return result
         case .unavailable:
-            return "No balance or reset data. Open When Reset to refresh."
+            return "No balance or reset data. Open Blinky to refresh."
         }
     }
 
@@ -388,7 +388,7 @@ private enum WidgetEntryResolver {
         guard !stored.isEmpty else {
             return unavailableEntry(
                 accountID: requestedAccountID,
-                accountName: account?.name ?? metric?.accountName ?? "When Reset",
+                accountName: account?.name ?? metric?.accountName ?? "Blinky",
                 providerName: account?.providerName ?? "Add an account",
                 metric: metric,
                 homeStyle: homeStyle,
@@ -405,7 +405,7 @@ private enum WidgetEntryResolver {
                 return unavailableEntry(
                     accountID: requestedAccountID,
                     accountName: account?.name ?? metric?.accountName ?? "Account unavailable",
-                    providerName: account?.providerName ?? "Open When Reset",
+                    providerName: account?.providerName ?? "Open Blinky",
                     metric: metric,
                     homeStyle: homeStyle,
                     displayStyle: displayStyle,

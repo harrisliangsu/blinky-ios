@@ -1065,11 +1065,11 @@ async function createPasskeyRegistrationOptions(
      WHERE rp_id = ? AND access_key_generation <> ?`
   ).bind(url.hostname, generation).run();
   const options = await generateRegistrationOptions({
-    rpName: "When Reset",
+    rpName: "Blinky",
     rpID: url.hostname,
     userID: new Uint8Array(base64URLBytes(identity.user_handle)),
-    userName: "When Reset operator",
-    userDisplayName: "When Reset operator",
+    userName: "Blinky operator",
+    userDisplayName: "Blinky operator",
     timeout: WEBAUTHN_CHALLENGE_TTL_SECONDS * 1_000,
     attestationType: "none",
     supportedAlgorithmIDs: [-7],

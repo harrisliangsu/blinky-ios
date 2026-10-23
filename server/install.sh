@@ -8,7 +8,7 @@ usage() {
   cat <<'HELP'
 Usage: sudo bash install.sh --origin https://reset.example.com [--source /path/to/server]
 
-Install or update When Reset on a systemd Linux server (x86_64 or arm64).
+Install or update Blinky on a systemd Linux server (x86_64 or arm64).
 Debian/Ubuntu and Fedora/RHEL-family prerequisites are installed automatically.
 Node.js 24 is installed privately under /opt/when-reset, leaving system Node alone.
 Run the same command to update; existing secrets and database are preserved.
@@ -58,7 +58,7 @@ if ((missing)); then
   fi
 fi
 exec 9>/run/lock/when-reset-install.lock
-flock -n 9 || fail 'Another When Reset installation is running.'
+flock -n 9 || fail 'Another Blinky installation is running.'
 work_dir=$(mktemp -d)
 staged_env=""
 trap 'rm -rf -- "$work_dir"; if [[ -n "$staged_env" ]]; then rm -f -- "$staged_env"; fi' EXIT
@@ -67,9 +67,9 @@ if [[ -z "$source_dir" && -f "$script_dir/package.json" && -d "$script_dir/src" 
   source_dir="$script_dir"
 fi
 if [[ -z "$source_dir" ]]; then
-  printf 'Downloading When Reset from master...\n'
+  printf 'Downloading Blinky from master...\n'
   curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-    https://github.com/iebb/when-reset/archive/refs/heads/master.tar.gz -o "$work_dir/source.tar.gz"
+    https://github.com/harrisliangsu/blinky-ios/archive/refs/heads/master.tar.gz -o "$work_dir/source.tar.gz"
   mkdir "$work_dir/source"
   tar -xzf "$work_dir/source.tar.gz" --strip-components=1 -C "$work_dir/source"
   source_dir="$work_dir/source/server"
@@ -176,7 +176,7 @@ if (( ! ready )); then
   [[ -z "$backup" ]] || printf 'Pre-update backup: %s\n' "$backup" >&2
   fail 'Health check failed. Inspect journalctl -u when-reset. Configuration and data have been preserved.'
 fi
-printf '\nWhen Reset is running on 127.0.0.1:%s.\n' "$port"
+printf '\nBlinky is running on 127.0.0.1:%s.\n' "$port"
 printf 'Configure your HTTPS reverse proxy to this address, then open PUBLIC_ORIGIN.\n'
 printf 'Configuration and dashboard access key: /etc/when-reset/server.env (not printed).\n'
 printf 'Logs: journalctl -u when-reset -f\n'

@@ -205,7 +205,7 @@ struct WhenResetApp: App {
             _ = await store.refreshAll(source: .background)
         }
 #elseif os(macOS)
-        Window("When Reset", id: "main") {
+        Window("Blinky", id: "main") {
             MacContentView()
                 .environment(store)
                 .task(id: scenePhase) {
@@ -215,7 +215,7 @@ struct WhenResetApp: App {
         }
         .defaultSize(width: 980, height: 680)
 
-        MenuBarExtra("When Reset", systemImage: "clock.arrow.circlepath") {
+        MenuBarExtra("Blinky", systemImage: "clock.arrow.circlepath") {
             MacMenuBarView()
                 .environment(store)
         }

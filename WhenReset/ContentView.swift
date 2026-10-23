@@ -64,7 +64,7 @@ private struct UsageTabView: View {
                 if store.accounts.isEmpty { emptyState }
                 else { accountList }
             }
-            .navigationTitle(store.accounts.isEmpty ? "When Reset" : "Usage")
+            .navigationTitle(store.accounts.isEmpty ? "Blinky" : "Usage")
             .navigationBarTitleDisplayMode(store.accounts.isEmpty ? .inline : .automatic)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -1462,12 +1462,16 @@ struct SettingsView: View {
                     Toggle("Show percentage remaining", isOn: $settings.showRemainingPercentage)
                     Toggle("Show banked resets", isOn: $settings.showBankedResets)
                 }
-                Section("GitHub") {
+                Section("About") {
+                    LabeledContent("App", value: "Blinky")
+                    Text("Fork of When Reset (iebb/when-reset).")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     Link(destination: AppLinks.sourceCode) {
-                        Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
+                        Label("Upstream source", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
                     Link(destination: AppLinks.issues) {
-                        Label("Report an Issue", systemImage: "exclamationmark.bubble")
+                        Label("Upstream issues", systemImage: "exclamationmark.bubble")
                     }
                 }
             }
@@ -1520,7 +1524,7 @@ struct SettingsView: View {
         case .always:
             "Shows whenever at least one included quota or banked reset is available."
         case .disabled:
-            "Ends the current Live Activity and prevents When Reset from starting another one."
+            "Ends the current Live Activity and prevents Blinky from starting another one."
         }
     }
 
@@ -1814,9 +1818,9 @@ private struct WorkerLinkReviewView: View {
 
     private var finalConfirmationMessage: String {
         if selectedAccountIDs.isEmpty {
-            return "When Reset will send this device’s APNs token to \(host). No provider credentials will be uploaded."
+            return "Blinky will send this device’s APNs token to \(host). No provider credentials will be uploaded."
         }
-        return "When Reset will send this device’s APNs token and the selected access tokens, refresh tokens, ID tokens, or API keys to \(host)."
+        return "Blinky will send this device’s APNs token and the selected access tokens, refresh tokens, ID tokens, or API keys to \(host)."
     }
 
     private func accountSelection(_ id: UUID) -> Binding<Bool> {

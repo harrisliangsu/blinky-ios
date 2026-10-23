@@ -13,8 +13,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "1.6"
-    CURRENT_PROJECT_VERSION: "28"
+    MARKETING_VERSION: "1.7"
+    CURRENT_PROJECT_VERSION: "29"
 targets:
   WhenReset:
     type: application

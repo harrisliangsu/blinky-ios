@@ -581,7 +581,7 @@ describe("one-use Worker linking", () => {
       expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
       expect(response.headers.get("referrer-policy")).toBe("no-referrer");
       expect(response.headers.get("x-frame-options")).toBe("DENY");
-      expect(body).toContain("When Reset");
+      expect(body).toContain("Blinky");
       expect(body).toContain("Open private dashboard");
       expect(body).toContain("push.example");
       expect(body).toContain("method=\"post\" action=\"/v1/dashboard/session\"");
@@ -873,7 +873,7 @@ describe("credential-safe monitoring dashboard", () => {
     expect(page.headers.get("cache-control")).toBe("no-store");
     expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
     expect(page.headers.get("x-robots-tag")).toBe("noindex, nofollow, noarchive");
-    expect(html).toContain("When Reset");
+    expect(html).toContain("Blinky");
     expect(html).toContain("const MAX_CHART_GAP_MS = 12 * 60 * 60 * 1000");
     expect(html).toContain("point.time - points[pointIndex - 1].time > MAX_CHART_GAP_MS");
     expect(html).toContain('id="history-plan-changes"');

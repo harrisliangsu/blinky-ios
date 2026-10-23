@@ -1,5 +1,15 @@
 # Changelog / 更新说明
 
+## 1.7
+
+### 中文
+
+- 本分支的用户可见产品名改为 **Blinky**（主屏幕、设置、小组件文案和自托管面板）。Bundle ID、Widget ID 和 App Group 不变，仍是 `com.harrisliangsu.whenreset`。这是 Harris 分支的品牌，不是原项目；上游仍是 [iebb/when-reset](https://github.com/iebb/when-reset)（When Reset）。本仓库是 [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios)。
+
+### English
+
+- This fork's user-visible product name is now **Blinky** (Home Screen, Settings, widget copy, and the self-hosted dashboard). Bundle ID, widget ID, and App Group are unchanged (`com.harrisliangsu.whenreset`). Blinky is this fork's branding, not a claim to be the original; upstream remains [iebb/when-reset](https://github.com/iebb/when-reset) (When Reset). This repository is [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios).
+
 ## 1.6
 
 ### 中文

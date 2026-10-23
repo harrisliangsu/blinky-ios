@@ -84,4 +84,4 @@ check tracing output, journal output, filesystem permissions and key/data preser
 These are regression checks, not an assurance that every secret pattern is detectable. If a
 real credential reaches Git or public logs, revoke/rotate it at its issuer promptly; deleting
 the visible line or rewriting Git history alone does not make the credential safe again.
-See the [security policy](https://github.com/iebb/when-reset/blob/master/SECURITY.md) for reporting.
+See the [security policy](https://github.com/harrisliangsu/blinky-ios/blob/master/SECURITY.md) for reporting. Upstream When Reset remains [iebb/when-reset](https://github.com/iebb/when-reset).

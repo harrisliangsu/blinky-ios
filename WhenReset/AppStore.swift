@@ -194,12 +194,12 @@ struct AccountRefreshFailure: Equatable, Sendable {
             return "This account is no longer available on the self-hosted Worker."
         }
         if httpStatus(for: error) == 429 {
-            return "Updates are temporarily rate-limited. Showing the latest saved usage; When Reset will retry automatically."
+            return "Updates are temporarily rate-limited. Showing the latest saved usage; Blinky will retry automatically."
         }
         if error is URLError {
-            return "The provider couldn’t be reached. Showing the latest saved usage; When Reset will retry automatically."
+            return "The provider couldn’t be reached. Showing the latest saved usage; Blinky will retry automatically."
         }
-        return "The latest usage could not be loaded. Showing the latest saved usage; When Reset will retry automatically."
+        return "The latest usage could not be loaded. Showing the latest saved usage; Blinky will retry automatically."
     }
 
     private static func httpStatus(for error: Error) -> Int? {
@@ -2909,7 +2909,7 @@ final class AppStore {
               ActivityAuthorizationInfo().areActivitiesEnabled,
               hasEligibleLiveActivityContent else { return }
         let attributes = UsageActivityAttributes(accountID: Self.globalActivityID,
-                                                  accountName: "All accounts", providerName: "When Reset")
+                                                  accountName: "All accounts", providerName: "Blinky")
         let state = activityState()
         do {
             _ = try Activity.request(attributes: attributes,
