@@ -1,12 +1,22 @@
 # Blinky
 
-支持 / Sponsor: [Afdian](https://afdian.com/a/sharkchiligaga)
+[![Stars](https://img.shields.io/github/stars/harrisliangsu/blinky-ios)](https://github.com/harrisliangsu/blinky-ios/stargazers) [![Last commit](https://img.shields.io/github/last-commit/harrisliangsu/blinky-ios)](https://github.com/harrisliangsu/blinky-ios/commits/master) [![iOS](https://img.shields.io/badge/iOS-17%2B-black?logo=apple)](https://github.com/harrisliangsu/blinky-ios) [![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS-orange?logo=swift&logoColor=white)](https://github.com/harrisliangsu/blinky-ios)
 
-Harris Liang 的 iOS 应用 **Blinky**。这是上游 [When Reset（iebb/when-reset）](https://github.com/iebb/when-reset) 的分支，不是原项目。本仓库是 [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios)。上游仓库没有 LICENSE 文件；本分支保留原作者署名，并改用 Harris 自己的 Bundle ID 前缀，以便用 Harris 的 Apple Developer 团队发布 TestFlight。
+iOS 用量/重置监控（ChatGPT、Claude、Grok、Kimi、智谱等），适合在 iPhone 上查看 AI 编程额度与重置时间。
 
-**Blinky** is Harris Liang's iOS app and a fork of upstream [When Reset (iebb/when-reset)](https://github.com/iebb/when-reset). It is not the original project. This fork lives at [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios). Upstream ships no LICENSE file. This fork keeps the original attribution and uses a Harris-owned bundle-id prefix so it can be signed with Harris's Apple Developer team.
+An iOS usage and reset monitor (ChatGPT, Claude, Grok, Kimi, Zhipu, and more) for people checking AI coding quotas on iPhone.
 
-A small SwiftUI iOS monitor for AI coding usage limits and reset times.
+**分支：** [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios) 是上游 [When Reset（iebb/when-reset）](https://github.com/iebb/when-reset) 的分支，不是原项目。上游没有 LICENSE；本分支保留原作者署名，并使用 Harris 自己的 Bundle ID 前缀，以便用他的 Apple Developer 团队签名。
+
+**Fork:** [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios) is a fork of upstream [When Reset (iebb/when-reset)](https://github.com/iebb/when-reset), not the original project. Upstream ships no LICENSE. This fork keeps the original attribution and a Harris-owned bundle-id prefix for his Apple Developer team.
+
+[Releases](https://github.com/harrisliangsu/blinky-ios/releases) · [Mac 姊妹应用 blinky-mac](https://github.com/harrisliangsu/blinky-mac) · [支持 / Sponsor](https://afdian.com/a/sharkchiligaga)
+
+## 当前状态
+
+TestFlight 与 App Store 仍被挡住：Apple Developer 注册和上传所需的仓库 secrets 还没齐，今天没有 TestFlight。[Releases](https://github.com/harrisliangsu/blinky-ios/releases) 目前没有安装包。要现在运行，按 [Build](#build) 从源码构建。
+
+TestFlight and the App Store are still blocked pending Apple Developer enrollment and repository secrets. There is no TestFlight build today, and [Releases](https://github.com/harrisliangsu/blinky-ios/releases) has no installable build yet. Build from source: [Build](#build).
 
 ## 此分支 / This fork
 
