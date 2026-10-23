@@ -5,7 +5,7 @@
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
   <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key><string>XPC!</string>
-  <key>CFBundleDisplayName</key><string>When Reset Widgets</string>
+  <key>CFBundleDisplayName</key><string>Blinky</string>
   <key>AppGroupIdentifier</key><string>$(APP_GROUP_IDENTIFIER)</string>
   <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>

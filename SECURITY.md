@@ -1,6 +1,6 @@
 # Security and secret handling
 
-When Reset can monitor accounts on an operator's Cloudflare Worker or Linux server. The
+Blinky can monitor accounts on an operator's Cloudflare Worker or Linux server. The
 operator, host administrators, deployment dependencies and TLS termination are trusted:
 the server must decrypt opted-in credentials to contact each provider. No software can
 guarantee that secrets will never leak from a compromised host, browser or operator account.
@@ -51,7 +51,7 @@ debugging that dumps environment variables.
 
 ## Reporting a vulnerability
 
-Use [GitHub's private vulnerability reporting](https://github.com/iebb/when-reset/security/advisories/new)
-before disclosing exploitation details. Public issues
+Report vulnerabilities in this fork through [GitHub private vulnerability reporting](https://github.com/harrisliangsu/blinky-ios/security/advisories/new)
+before disclosing exploitation details. Upstream When Reset remains [iebb/when-reset](https://github.com/iebb/when-reset). Public issues
 may describe a problem in general terms, but must never contain real keys, cookies, tokens,
 environment files, database files or backups. Use synthetic values to reproduce a report.

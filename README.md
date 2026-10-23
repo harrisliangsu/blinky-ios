@@ -1,8 +1,8 @@
-# When Reset
+# Blinky
 
-Harris Liang 的分支，基于 [iebb/when-reset](https://github.com/iebb/when-reset)。上游仓库没有 LICENSE 文件；本分支保留原作者署名，并改用 Harris 自己的 Bundle ID 前缀，以便用 Harris 的 Apple Developer 团队发布 TestFlight。
+Harris Liang 的 iOS 应用 **Blinky**。这是上游 [When Reset（iebb/when-reset）](https://github.com/iebb/when-reset) 的分支，不是原项目。本仓库是 [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios)。上游仓库没有 LICENSE 文件；本分支保留原作者署名，并改用 Harris 自己的 Bundle ID 前缀，以便用 Harris 的 Apple Developer 团队发布 TestFlight。
 
-This is Harris Liang's fork of [iebb/when-reset](https://github.com/iebb/when-reset). Upstream ships no LICENSE file. This fork keeps the original attribution and uses a Harris-owned bundle-id prefix so it can be signed with Harris's Apple Developer team.
+**Blinky** is Harris Liang's iOS app and a fork of upstream [When Reset (iebb/when-reset)](https://github.com/iebb/when-reset). It is not the original project. This fork lives at [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios). Upstream ships no LICENSE file. This fork keeps the original attribution and uses a Harris-owned bundle-id prefix so it can be signed with Harris's Apple Developer team.
 
 A small SwiftUI iOS monitor for AI coding usage limits and reset times.
 
@@ -118,21 +118,21 @@ the variable after investigating; never put the private key in the variable or r
 
 - ChatGPT reads private `wham` usage and banked-reset endpoints.
 - Claude uses the Claude Code OAuth client and usage endpoint.
-- Grok follows the weekly account pool described by [Pulse](https://github.com/qunqin24/Pulse) (`Docs/providers/grok.md`, `GrokUsageService.swift`, Apache-2.0). Device OAuth scopes are `openid email offline_access grok-cli:access` (`billing:read` is refused for this public client). Usage is `GET /v1/billing?format=credits` and the plan name is `subscription_tier_display` from `GET /v1/settings`, both with `x-xai-token-auth: xai-grok-cli`. An omitted percentage is 0% only while that period is still running. The access token lasts about six hours and is refreshed with the refresh token. When Reset does not treat xAI API spend as the coding pool.
+- Grok follows the weekly account pool described by [Pulse](https://github.com/qunqin24/Pulse) (`Docs/providers/grok.md`, `GrokUsageService.swift`, Apache-2.0). Device OAuth scopes are `openid email offline_access grok-cli:access` (`billing:read` is refused for this public client). Usage is `GET /v1/billing?format=credits` and the plan name is `subscription_tier_display` from `GET /v1/settings`, both with `x-xai-token-auth: xai-grok-cli`. An omitted percentage is 0% only while that period is still running. The access token lasts about six hours and is refreshed with the refresh token. Blinky does not treat xAI API spend as the coding pool.
 - Kimi uses the public client embedded in the official Kimi Code client. Moonshot does not currently publish a third-party client-registration process.
 - GitHub Copilot uses GitHub device authorization, but exact remaining quotas come from the undocumented `copilot_internal/user` endpoint. Its bundled VS Code client ID should be replaced with a separately registered client before distribution.
 - 智谱 GLM / Z.AI uses a user-provided Coding Plan key. Automatic mode tries `https://api.z.ai` and then `https://open.bigmodel.cn` (path `/api/monitor/usage/quota/limit`) and stores the host that returns a successful `code` / `success` envelope. Choosing Global or 中国大陆 sends the key to that host only, so a wrong-region key fails on the host the user picked instead of looking like a generic quota error. The quota endpoint is not documented as a public API; general-purpose and pay-as-you-go keys are outside this app’s scope.
-- MiniMax uses a user-provided Subscription Key and its documented Token Plan remaining-quota endpoint. When Reset tries the global service first, then the mainland-China service for regional keys. Standard pay-as-you-go keys are outside this app’s scope.
+- MiniMax uses a user-provided Subscription Key and its documented Token Plan remaining-quota endpoint. Blinky tries the global service first, then the mainland-China service for regional keys. Standard pay-as-you-go keys are outside this app’s scope.
 - Synthetic and Warp use user-provided API keys with fixed quota endpoints. Both can opt in to self-hosted Worker monitoring.
 - OpenRouter reads the authenticated key's official credit-limit response, including its stable creator identity and daily, weekly, or monthly limit period when configured. Fireworks AI resolves the key's official account resource before reading account quotas, including the monthly USD spend limit when present. Both use fixed provider hosts and can opt in to self-hosted Worker monitoring.
-- DeepSeek reads its official user-balance response and prefers USD when the service returns both USD and CNY balances. Poe reads the official current point balance. Neither response documents a reset timestamp, so When Reset displays the available balance without inventing a reset date. Both fixed-host integrations can opt in to self-hosted Worker monitoring.
-- OpenAI and Anthropic billing use their organization Cost APIs and require Admin API keys; standard inference keys cannot read organization billing. Without an optional monthly budget, When Reset displays month-to-date spend instead of inventing a remaining balance. Their fixed-host integrations can opt in to self-hosted Worker monitoring.
+- DeepSeek reads its official user-balance response and prefers USD when the service returns both USD and CNY balances. Poe reads the official current point balance. Neither response documents a reset timestamp, so Blinky displays the available balance without inventing a reset date. Both fixed-host integrations can opt in to self-hosted Worker monitoring.
+- OpenAI and Anthropic billing use their organization Cost APIs and require Admin API keys; standard inference keys cannot read organization billing. Without an optional monthly budget, Blinky displays month-to-date spend instead of inventing a remaining balance. Their fixed-host integrations can opt in to self-hosted Worker monitoring.
 - New API-compatible accounts read `/v1/dashboard/billing/subscription` and `/v1/dashboard/billing/usage` from the user-selected HTTPS origin. The custom origin and key remain on-device.
 - Ollama Cloud currently exposes quota windows on its signed-in settings page, not through its API-key endpoints. Its session cookie therefore remains on-device.
 - Antigravity uses Google OAuth and internal Cloud Code Assist quota endpoints. The mobile callback is completed by pasting the localhost URL, and its tokens remain on-device because the protocol is experimental.
 - Compatible API accounts issue only `GET` requests to the exact user-entered HTTPS endpoint (or loopback HTTP), send a bearer key, cap responses at 1 MiB, and require explicit percentages or counters plus future reset timestamps. Their URL and key remain on-device.
 
-When Reset tracks recurring coding-plan allowances and explicitly linked API billing accounts. The private and first-party-compatible integrations may change without notice. No provider token is written to app snapshots, logs, or user defaults.
+Blinky tracks recurring coding-plan allowances and explicitly linked API billing accounts. The private and first-party-compatible integrations may change without notice. No provider token is written to app snapshots, logs, or user defaults.
 
 The OpenAI Blossom is used only to identify the ChatGPT provider. OpenAI, ChatGPT, and the Blossom are trademarks of OpenAI; this project is not endorsed by or affiliated with OpenAI.
 The Grok provider mark is adapted from CodexBar’s MIT-licensed provider asset and is used only for identification. Grok and xAI are trademarks of xAI; this project is not endorsed by or affiliated with xAI.
@@ -141,7 +141,7 @@ The Grok provider mark is adapted from CodexBar’s MIT-licensed provider asset 
 
 **[Linux quick start](docs/wiki/Linux-Quick-Start.md)** ·
 [Deployment guides](docs/wiki/Home.md) ·
-[GitHub wiki](https://github.com/iebb/when-reset/wiki) ·
+[Docs in this fork](https://github.com/harrisliangsu/blinky-ios/tree/master/docs/wiki) ·
 [Security and secrets](SECURITY.md)
 
 Deploy the optional server on [Linux on your own network](server/README.md#deploy-on-linux)
@@ -158,7 +158,7 @@ sudo bash server/install.sh --origin https://reset.example.com
 Follow the Linux guide to configure HTTPS and link the app. Both deployments require
 explicit account-by-account monitoring consent.
 
-The optional [Cloudflare Worker](server/README.md) is self-hosted in the user’s Cloudflare account. It sends hourly silent refresh hints and can, only for accounts individually opted in by the user, encrypt provider credentials in D1 and record quota every 5 minutes or longer. The app merges those server samples into its 24-hour, 7-day, and 30-day usage charts. Opaque, deployment-specific account references attach retained Worker history to the matching local account and collapse differently named copies of the same verified ChatGPT profile. The app shows whether the Worker’s last provider check found an active or expired session; a new sign-in can replace an expired credential directly on the Worker. Credential upload and replacement are strictly write-only: no API route downloads plaintext credentials, encrypted envelopes, or fingerprints. Overlapping client accounts are fetched once per credential scope and cron occurrence. When Reset does not operate an official server.
+The optional [Cloudflare Worker](server/README.md) is self-hosted in the user’s Cloudflare account. It sends hourly silent refresh hints and can, only for accounts individually opted in by the user, encrypt provider credentials in D1 and record quota every 5 minutes or longer. The app merges those server samples into its 24-hour, 7-day, and 30-day usage charts. Opaque, deployment-specific account references attach retained Worker history to the matching local account and collapse differently named copies of the same verified ChatGPT profile. The app shows whether the Worker’s last provider check found an active or expired session; a new sign-in can replace an expired credential directly on the Worker. Credential upload and replacement are strictly write-only: no API route downloads plaintext credentials, encrypted envelopes, or fingerprints. Overlapping client accounts are fetched once per credential scope and cron occurrence. Blinky does not operate an official server.
 
 After unlocking the Worker dashboard with `REGISTRATION_ACCESS_KEY`, the operator can optionally enroll a WebAuthn passkey for later access. Apple devices can store and synchronize that passkey through iCloud Keychain, but the passkey is scoped to the exact Worker hostname and is separate from the app's synchronized provider credentials. Its private key never leaves the authenticator or password manager. Keep the registration key as the recovery method: changing the hostname requires enrollment on the new hostname, and rotating the registration key invalidates existing dashboard sessions and passkeys. See [dashboard passkeys and recovery](server/README.md#dashboard-passkeys-and-icloud-keychain).
 
@@ -168,4 +168,4 @@ The APNs signing key under `server/apns/` is deliberately versioned, not an acci
 
 The vendored APNs key is the upstream author's production key, topic-specific to `ad.neko.when`. It cannot access App Store Connect, Harris's `com.harrisliangsu.whenreset` topic, or discover device tokens. This fork's server advertises `APNS_TOPIC` (default `com.harrisliangsu.whenreset`). Replace the key with one from Harris's team before expecting pushes to the TestFlight app. See the [shared APNs key security model](server/README.md#shared-apns-key) for the upstream key's restrictions.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/iebb/when-reset/tree/master/server)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/harrisliangsu/blinky-ios/tree/master/server)

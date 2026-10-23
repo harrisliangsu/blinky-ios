@@ -3,15 +3,15 @@
 <plist version="1.0"><dict>
   <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
-  <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+  <key>CFBundleName</key><string>Blinky</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleDisplayName</key><string>When Reset</string>
+  <key>CFBundleDisplayName</key><string>Blinky</string>
   <key>WhenResetBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
   <key>AppGroupIdentifier</key><string>$(APP_GROUP_IDENTIFIER)</string>
   <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
-  <key>NSCameraUsageDescription</key><string>Scan a QR code from your self-hosted When Reset Worker.</string>
+  <key>NSCameraUsageDescription</key><string>Scan a QR code from your self-hosted Blinky Worker.</string>
   <key>CFBundleURLTypes</key><array>
     <dict>
       <key>CFBundleURLName</key><string>$(PRODUCT_BUNDLE_IDENTIFIER).worker-link</string>

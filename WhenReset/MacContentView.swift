@@ -37,7 +37,7 @@ struct MacContentView: View {
                     }
                 }
             }
-            .navigationTitle("When Reset")
+            .navigationTitle("Blinky")
             .safeAreaInset(edge: .bottom) {
                 HStack(spacing: 18) {
                     Button {
@@ -94,7 +94,7 @@ struct MacContentView: View {
             MacWorkerLinkReviewView(draft: draft)
                 .environment(store)
         }
-        .alert("When Reset", isPresented: errorIsPresented) {
+        .alert("Blinky", isPresented: errorIsPresented) {
             Button("OK") { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "Something went wrong.")
@@ -1590,7 +1590,7 @@ struct MacMenuBarView: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Label("When Reset", systemImage: "clock.arrow.circlepath")
+                    Label("Blinky", systemImage: "clock.arrow.circlepath")
                         .font(.headline)
                     if let latestUpdate {
                         Text("Updated \(latestUpdate, format: .relative(presentation: .named))")
@@ -1637,7 +1637,7 @@ struct MacMenuBarView: View {
                 ContentUnavailableView(
                     "No upcoming resets",
                     systemImage: "clock.badge.checkmark",
-                    description: Text("Open When Reset to add or refresh an account.")
+                    description: Text("Open Blinky to add or refresh an account.")
                 )
                 .frame(height: 190)
             } else {
@@ -1653,7 +1653,7 @@ struct MacMenuBarView: View {
 
             Divider()
             HStack {
-                Button("Open When Reset", action: openMainWindow)
+                Button("Open Blinky", action: openMainWindow)
                     .keyboardShortcut("o", modifiers: .command)
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
@@ -1738,7 +1738,7 @@ struct MacSettingsView: View {
             } header: {
                 Text("Updates")
             } footer: {
-                Text("When Reset checks all local accounts at this interval while the app is running. Manual refresh remains available when automatic updates are off.")
+                Text("Blinky checks all local accounts at this interval while the app is running. Manual refresh remains available when automatic updates are off.")
             }
 
             Section("Notifications") {
@@ -1789,7 +1789,7 @@ struct MacSettingsView: View {
 
             Section("Live Activity on Mac") {
                 Label {
-                    Text("Apple displays an active When Reset Live Activity from your paired iPhone or iPad in the Mac menu bar. The native Mac menu-bar item above remains available even when no paired-device Live Activity is running.")
+                    Text("Apple displays an active Blinky Live Activity from your paired iPhone or iPad in the Mac menu bar. The native Mac menu-bar item above remains available even when no paired-device Live Activity is running.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "iphone.and.arrow.forward.inward")
@@ -1797,11 +1797,15 @@ struct MacSettingsView: View {
             }
 
             Section("About") {
+                LabeledContent("App", value: "Blinky")
                 LabeledContent("Version") {
                     Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
                 }
-                Link("Source code", destination: URL(string: "https://github.com/iebb/when-reset")!)
-                Link("Report an issue", destination: URL(string: "https://github.com/iebb/when-reset/issues")!)
+                Text("Fork of When Reset (iebb/when-reset).")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Link("Upstream source", destination: URL(string: "https://github.com/iebb/when-reset")!)
+                Link("Upstream issues", destination: URL(string: "https://github.com/iebb/when-reset/issues")!)
             }
         }
         .formStyle(.grouped)
@@ -1967,7 +1971,7 @@ private struct MacWorkerLinkReviewView: View {
                 Button("Link Mac") { commitLink() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("When Reset will create device-local registration credentials and send this Mac’s APNs token. Provider credentials remain on the Worker.")
+                Text("Blinky will create device-local registration credentials and send this Mac’s APNs token. Provider credentials remain on the Worker.")
             }
         }
         .frame(minWidth: 620, minHeight: 520)
@@ -2367,7 +2371,7 @@ private struct MacAddAccountView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: { source in
-            Text("When Reset will copy the existing \(source.displayName) credential into its iCloud Keychain and verify the account identity. It will update the Worker only if this same account already has Worker monitoring enabled.")
+            Text("Blinky will copy the existing \(source.displayName) credential into its iCloud Keychain and verify the account identity. It will update the Worker only if this same account already has Worker monitoring enabled.")
         }
         .onDisappear { completionTask?.cancel(); store.cancelLink() }
     }
@@ -2424,14 +2428,14 @@ private struct MacAddAccountView: View {
     private func deviceLinker(_ provider: ProviderID) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(relinkingAccount?.isRemoteOnly == true
-                 ? "When Reset uses the provider’s device authorization page. The replacement credential is sent directly to your Worker and is not stored on this Mac."
-                 : "When Reset uses the provider’s device authorization page. Credentials are stored securely in iCloud Keychain.")
+                 ? "Blinky uses the provider’s device authorization page. The replacement credential is sent directly to your Worker and is not stored on this Mac."
+                 : "Blinky uses the provider’s device authorization page. Credentials are stored securely in iCloud Keychain.")
                 .foregroundStyle(.secondary)
             if let account = relinkingAccount,
                store.accountLinkProgress.applies(to: account.id),
                store.accountLinkProgress.isVerifyingWorker {
                 ProgressView("Updating Worker sign-in…")
-                Text("Provider authorization succeeded. When Reset is securely replacing the Worker credential and checking that quota refresh is active.")
+                Text("Provider authorization succeeded. Blinky is securely replacing the Worker credential and checking that quota refresh is active.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if let account = relinkingAccount,
@@ -2655,9 +2659,9 @@ private struct MacAddAccountView: View {
         default: "read quota data"
         }
         if relinkingAccount?.isRemoteOnly == true {
-            return "Paste the provider API key. When Reset uses it only to \(purpose), then sends it directly to your authenticated Worker to replace its encrypted copy. It is not stored on this Mac or returned by the Worker."
+            return "Paste the provider API key. Blinky uses it only to \(purpose), then sends it directly to your authenticated Worker to replace its encrypted copy. It is not stored on this Mac or returned by the Worker."
         }
-        return "Paste the provider API key. When Reset uses it only to \(purpose). It is stored securely in iCloud Keychain and is never shown again."
+        return "Paste the provider API key. Blinky uses it only to \(purpose). It is stored securely in iCloud Keychain and is never shown again."
     }
 
     private func cancelLink() {

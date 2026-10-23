@@ -1435,8 +1435,8 @@ const DASHBOARD_SCRIPT = String.raw`
       setText(
         els.accountsEmpty.querySelector("p"),
         deviceCount === 0
-          ? "Link a device, then opt accounts into server monitoring from When Reset."
-          : "No accounts are opted into this Worker yet. Enable server monitoring for an account in When Reset."
+          ? "Link a device, then opt accounts into server monitoring from Blinky."
+          : "No accounts are opted into this Worker yet. Enable server monitoring for an account in Blinky."
       );
       return;
     }
@@ -2195,7 +2195,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
-  <title>When Reset · Monitor</title>
+  <title>Blinky · Monitor</title>
   <style nonce="${safeNonce}">
     /* One coherent system: a quiet ink-and-indigo console. Depth comes from layered
        surfaces and hairlines rather than heavy shadows, so dense data stays legible. */
@@ -2719,10 +2719,10 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
   <a class="skip-link" href="#main-content">Skip to dashboard</a>
   <header class="site-header">
     <div class="site-header__inner">
-      <div class="brand" aria-label="When Reset monitor">
+      <div class="brand" aria-label="Blinky monitor">
         <span class="brand__mark" aria-hidden="true">WR</span>
         <span class="brand__text">
-          <span class="brand__name">When Reset</span>
+          <span class="brand__name">Blinky</span>
           <span class="brand__host">${safeDisplayName}</span>
         </span>
       </div>
@@ -2747,7 +2747,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
         <ul class="trust-list">
           <li>Account credentials are never returned to this website.</li>
           <li>The access key opens a short-lived, same-origin session and is cleared immediately.</li>
-          <li>Provider sign-in and credential updates stay inside the When Reset app.</li>
+          <li>Provider sign-in and credential updates stay inside the Blinky app.</li>
         </ul>
       </div>
       <section class="unlock-card" aria-labelledby="unlock-title">
@@ -2834,7 +2834,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
         </div>
         <div id="accounts-empty" class="empty-state" hidden>
           <h3>No monitored accounts yet</h3>
-          <p>Link a device, then opt accounts into server monitoring from When Reset.</p>
+          <p>Link a device, then opt accounts into server monitoring from Blinky.</p>
         </div>
         <div id="accounts-grid" class="accounts-grid"></div>
       </section>
@@ -2879,7 +2879,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
         <p id="devices-status" class="section-status" role="status" aria-live="polite">Loading linked devices…</p>
         <div id="devices-empty" class="empty-state" hidden>
           <h3>No devices are linked</h3>
-          <p>Create a one-use link below and scan it with When Reset to attach your first device.</p>
+          <p>Create a one-use link below and scan it with Blinky to attach your first device.</p>
         </div>
         <ul id="devices-list" class="device-list"></ul>
       </section>
@@ -2889,14 +2889,14 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
           <div class="link-copy">
             <p class="eyebrow">One-use link</p>
             <h2 id="link-title">Link another device</h2>
-            <p>Create a five-minute QR code for When Reset. The existing private dashboard session authorizes creation, so the access key is never copied into the code.</p>
+            <p>Create a five-minute QR code for Blinky. The existing private dashboard session authorizes creation, so the access key is never copied into the code.</p>
             <button id="link-button" class="button" type="button">Create device link</button>
             <p id="link-status" class="link-status" role="status" aria-live="polite">Nothing is uploaded until you confirm inside the app.</p>
           </div>
           <div id="link-result" class="link-result" hidden>
-            <div id="qr-code" class="qr-code" aria-label="When Reset device link QR code"></div>
+            <div id="qr-code" class="qr-code" aria-label="Blinky device link QR code"></div>
             <p id="link-expiry" class="link-expiry"></p>
-            <a id="open-link" class="button" href="#">Open When Reset</a>
+            <a id="open-link" class="button" href="#">Open Blinky</a>
           </div>
         </div>
       </section>
@@ -2949,7 +2949,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
           </article>
           <article class="security-item">
             <h3>Changes happen deliberately</h3>
-            <p>Use When Reset to add accounts or renew a provider sign-in. From here you can remove a monitored account or unlink a device, and destructive steps ask for the recovery access key first.</p>
+            <p>Use Blinky to add accounts or renew a provider sign-in. From here you can remove a monitored account or unlink a device, and destructive steps ask for the recovery access key first.</p>
           </article>
         </div>
       </section>
@@ -2957,7 +2957,7 @@ export function renderDashboardPage(origin: string, displayName: string, nonce: 
   </main>
 
   <footer class="footer">
-    <span>When Reset self-hosted monitor</span>
+    <span>Blinky self-hosted monitor</span>
     <span>${safeOrigin}</span>
   </footer>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

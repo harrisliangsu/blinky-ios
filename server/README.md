@@ -1,6 +1,6 @@
-# When Reset self-hosted server
+# Blinky self-hosted server
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/iebb/when-reset/tree/master/server)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/harrisliangsu/blinky-ios/tree/master/server)
 
 Run this self-hosted server on **Cloudflare Workers** or on a **Linux server on your own
 network**. Both deployments use the same API, dashboard, account monitoring and device
@@ -12,7 +12,7 @@ Start with the [Linux quick start](../docs/wiki/Linux-Quick-Start.md). Detailed 
 [upgrades and backups](../docs/wiki/Operations-and-Backups.md),
 [secret handling](../docs/wiki/Security-and-Secrets.md), and
 [moving from Workers](../docs/wiki/Moving-from-Cloudflare-Workers.md).
-These guides are also published in the [GitHub wiki](https://github.com/iebb/when-reset/wiki).
+These guides live in this fork at [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios/tree/master/docs/wiki). Upstream When Reset remains [iebb/when-reset](https://github.com/iebb/when-reset).
 
 Either deployment can:
 
@@ -22,7 +22,7 @@ Either deployment can:
 - provide a responsive website for account health, quota windows, reset times,
   API balances, device health, collection runs, and retained history.
 
-When Reset does not operate an official server. Server monitoring is off for every account by default. When you enable it for an account, the app uploads that account’s Keychain credentials only to the self-hosted server URL you configured.
+Blinky does not operate an official server. Server monitoring is off for every account by default. When you enable it for an account, the app uploads that account’s Keychain credentials only to the self-hosted server URL you configured.
 
 ## Deploy on Linux
 
@@ -36,8 +36,8 @@ Use a static address from your hosting provider/ISP, or run behind your own stab
 From a checkout:
 
 ```bash
-git clone --branch master https://github.com/iebb/when-reset.git
-cd when-reset
+git clone --branch master https://github.com/harrisliangsu/blinky-ios.git
+cd blinky-ios
 sudo bash server/install.sh --origin https://reset.example.com
 ```
 
@@ -45,9 +45,9 @@ Or download the standalone installer, review it, and run it. It downloads `maste
 there is no checkout next to the script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/iebb/when-reset/master/server/install.sh -o install-when-reset.sh
-less install-when-reset.sh
-sudo bash install-when-reset.sh --origin https://reset.example.com
+curl -fsSL https://raw.githubusercontent.com/harrisliangsu/blinky-ios/master/server/install.sh -o install-blinky.sh
+less install-blinky.sh
+sudo bash install-blinky.sh --origin https://reset.example.com
 ```
 
 The server listens on `127.0.0.1:8787`. Put an HTTPS reverse proxy in front of it and point
@@ -162,7 +162,7 @@ adapter and run the existing API/provider regression suite on Node and SQLite.
 
 ## Shared APNs key
 
-Like [Bark Server](https://github.com/Finb/bark-server), this repository bundles the APNs signing key required by independent self-hosted servers. The When Reset key was created in Apple Developer with all of these immutable APNs restrictions:
+Like [Bark Server](https://github.com/Finb/bark-server), this repository bundles the APNs signing key required by independent self-hosted servers. The upstream When Reset key was created in Apple Developer with all of these immutable APNs restrictions:
 
 - Service: Apple Push Notification service (APNs) only
 - Environment: Production only
@@ -195,9 +195,9 @@ After deployment:
    rotating `REGISTRATION_ACCESS_KEY` invalidates every existing dashboard session and
    enrolled dashboard passkey.
 3. In **Dashboard access**, optionally choose **Add passkey** after unlocking with the key.
-4. In **Link a device**, create a QR code, scan it with Camera, or use **Open When Reset**
+4. In **Link a device**, create a QR code, scan it with Camera, or use **Open Blinky**
    on the same device.
-5. Check the Worker hostname and the accounts listed by When Reset, then explicitly confirm the link.
+5. Check the Worker hostname and the accounts listed by Blinky, then explicitly confirm the link.
 
 ### Dashboard passkeys and iCloud Keychain
 
@@ -216,7 +216,7 @@ passkey there. If the hostname changes, unlock the new hostname with
 The authenticator or password manager creates and retains the passkey's private key. It never
 leaves the authenticator and is never sent to the Worker. D1 stores only the public verification
 material and minimal management metadata needed to accept the passkey. This dashboard passkey
-is separate from the provider credentials that the When Reset app may synchronize through
+is separate from the provider credentials that the Blinky app may synchronize through
 iCloud Keychain; enrolling it neither copies nor exposes any provider token, API key, session,
 or encrypted credential envelope.
 
@@ -231,9 +231,9 @@ again. Rotation deliberately invalidates every dashboard session and previously 
 passkey; an old local passkey may remain visible in a password manager, but the Worker will no
 longer accept it.
 
-The QR contains only the Worker HTTPS origin and a random, five-minute, one-use token. It never contains either deployment secret or any provider credential. Scanning only loads authenticated Worker metadata. When Reset does not register the device, save the Worker configuration, or upload any selected account credentials until the user confirms. The confirmation explains that the Worker operator is inside the credential trust boundary and identifies every account that will be uploaded.
+The QR contains only the Worker HTTPS origin and a random, five-minute, one-use token. It never contains either deployment secret or any provider credential. Scanning only loads authenticated Worker metadata. Blinky does not register the device, save the Worker configuration, or upload any selected account credentials until the user confirms. The confirmation explains that the Worker operator is inside the credential trust boundary and identifies every account that will be uploaded.
 
-After the device registers, enable **Monitor on Self-hosted Server** in each account that you want the Worker to fetch. The global **Server monitoring** picker controls the selected accounts’ cadence, starting at 5 minutes, and **Cloud history retention** controls how long each account’s Worker history is kept. Per-quota “Show as 100%” choices are sent as minimal metric descriptors so server-side chart samples preserve that behavior when a provider omits a quota. The Worker cron runs every 5 minutes and writes each successful per-quota sample to D1; When Reset merges downloaded server samples into the same charts as on-device refreshes. Silent device refresh hints remain hourly. APNs background delivery is best-effort: iOS may coalesce, delay, or suppress it, so a server sample can reach the on-device chart later than it was recorded.
+After the device registers, enable **Monitor on Self-hosted Server** in each account that you want the Worker to fetch. The global **Server monitoring** picker controls the selected accounts’ cadence, starting at 5 minutes, and **Cloud history retention** controls how long each account’s Worker history is kept. Per-quota “Show as 100%” choices are sent as minimal metric descriptors so server-side chart samples preserve that behavior when a provider omits a quota. The Worker cron runs every 5 minutes and writes each successful per-quota sample to D1; Blinky merges downloaded server samples into the same charts as on-device refreshes. Silent device refresh hints remain hourly. APNs background delivery is best-effort: iOS may coalesce, delay, or suppress it, so a server sample can reach the on-device chart later than it was recorded.
 
 **Upload Local History** backfills eligible on-device samples into D1. Every history row carries a deterministic tag derived from the account, metric, and recorded second; D1 enforces uniqueness by both that tag and the natural account/metric/timestamp key, so retries and samples already created by the Worker do not duplicate history. Uploaded rows are accepted only inside the selected retention window and never contain credentials.
 
@@ -305,7 +305,7 @@ Disabling monitoring for a source account deletes its server credentials, latest
 
 ### Credential-free device usage uploads
 
-An account can separately opt in to publishing sanitized usage from When Reset after an on-device
+An account can separately opt in to publishing sanitized usage from Blinky after an on-device
 refresh. This mode does not upload, create, replace, or delete provider credentials. Its D1 consent,
 source, and history tables are independent from Worker polling, so both modes can be enabled for
 the same local account. The dashboard coalesces that exact device/account pair, prefers its freshest

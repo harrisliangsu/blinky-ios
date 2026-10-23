@@ -1,4 +1,4 @@
-title = "When Reset secret scanning"
+title = "Blinky secret scanning"
 
 [extend]
 useDefault = true

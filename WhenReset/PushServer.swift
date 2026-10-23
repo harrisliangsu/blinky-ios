@@ -137,7 +137,7 @@ enum PushServerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidServerURL: "Enter a valid HTTPS server URL."
-        case .invalidWorkerLink: "This isn’t a valid When Reset Worker link."
+        case .invalidWorkerLink: "This isn’t a valid Blinky Worker link."
         case .expiredWorkerLink: "This Worker link has expired. Generate a new QR code."
         case .workerIdentityMismatch: "The Worker identity does not match this link."
         case .invalidResponse: "The push server returned an invalid response."

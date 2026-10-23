@@ -36,7 +36,7 @@ enum CopilotProviderError: LocalizedError {
         case .missingQuota:
             "GitHub returned no usable Copilot quota. This plan may use unmetered or organization-managed billing."
         case .missingResetDate:
-            "GitHub returned Copilot usage without a reset date, so When Reset cannot show a reliable countdown."
+            "GitHub returned Copilot usage without a reset date, so Blinky cannot show a reliable countdown."
         case let .server(code, message):
             "GitHub request failed (HTTP \(code)): \(message)"
         }
@@ -45,7 +45,7 @@ enum CopilotProviderError: LocalizedError {
 
 struct CopilotProvider {
     /// The public VS Code GitHub App client used by CodexBar's Copilot device flow.
-    /// A separately registered When Reset client should replace this before distribution.
+    /// A separately registered Blinky client should replace this before distribution.
     static let clientID = "Iv1.b507a08c87ecfe98"
 
     private static let deviceCodeURL = URL(string: "https://github.com/login/device/code")!

@@ -54,7 +54,7 @@ export function renderLinkPage(origin: string, displayName: string, nonce: strin
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Link When Reset</title>
+  <title>Link Blinky</title>
   <style nonce="${nonce}">
     :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: Canvas; color: CanvasText; }
@@ -80,9 +80,9 @@ export function renderLinkPage(origin: string, displayName: string, nonce: strin
 <body>
   <main>
     <section class="card">
-      <h1>Link When Reset</h1>
+      <h1>Link Blinky</h1>
       <p class="host">${safeDisplayName}<br>${safeOrigin}</p>
-      <p>Create a five-minute, one-use link for the When Reset app.</p>
+      <p>Create a five-minute, one-use link for the Blinky app.</p>
       <form id="link-form" method="post" action="/v1/link-sessions">
         <label for="access-key">Server access key</label>
         <input id="access-key" name="access-key" type="password" minlength="32" autocomplete="off" required>
@@ -90,10 +90,10 @@ export function renderLinkPage(origin: string, displayName: string, nonce: strin
       </form>
       <p id="status" role="status" aria-live="polite"></p>
       <section id="link-result" hidden>
-        <div id="qr-code" aria-label="When Reset worker link QR code"></div>
+        <div id="qr-code" aria-label="Blinky worker link QR code"></div>
         <p id="expiry"></p>
-        <a id="open-link" class="button" href="#">Open When Reset</a>
-        <p class="notice">Scanning does not upload anything. When Reset shows the server and affected accounts for confirmation before linking or uploading provider credentials.</p>
+        <a id="open-link" class="button" href="#">Open Blinky</a>
+        <p class="notice">Scanning does not upload anything. Blinky shows the server and affected accounts for confirmation before linking or uploading provider credentials.</p>
       </section>
     </section>
   </main>
