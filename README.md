@@ -1,5 +1,7 @@
 # Blinky
 
+支持 / Sponsor: [Afdian](https://afdian.com/a/sharkchiligaga)
+
 Harris Liang 的 iOS 应用 **Blinky**。这是上游 [When Reset（iebb/when-reset）](https://github.com/iebb/when-reset) 的分支，不是原项目。本仓库是 [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios)。上游仓库没有 LICENSE 文件；本分支保留原作者署名，并改用 Harris 自己的 Bundle ID 前缀，以便用 Harris 的 Apple Developer 团队发布 TestFlight。
 
 **Blinky** is Harris Liang's iOS app and a fork of upstream [When Reset (iebb/when-reset)](https://github.com/iebb/when-reset). It is not the original project. This fork lives at [harrisliangsu/blinky-ios](https://github.com/harrisliangsu/blinky-ios). Upstream ships no LICENSE file. This fork keeps the original attribution and uses a Harris-owned bundle-id prefix so it can be signed with Harris's Apple Developer team.
