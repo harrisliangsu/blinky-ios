@@ -5745,6 +5745,38 @@
         }
       }
     },
+    "expires in %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "expires in %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@后过期"
+          }
+        }
+      }
+    },
+    "next expires in %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "next expires in %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近一个 %@后过期"
+          }
+        }
+      }
+    },
     "1 banked reset": {
       "localizations": {
         "en": {

@@ -70,8 +70,9 @@ decoration.
 - **Account header.** Icon, name, plan. Gear on the trailing edge.
   Screen Time's name is a step smaller than Classic. 8pt between the
   header and the first quota row.
-- **Footer.** Banked reset and forecast are one disclosure, one chevron.
-  Updated is a single caption under that block: "Updated 12s ago".
+- **Footer.** Two lines at most. The forecast is the first. The second is
+  the banked reset and when that credit expires, with "Updated 12s ago"
+  trailing on the same line. One chevron, centered on the block.
 - **Forecast.** A pace that empties before reset says how long from now
   ("Runs out in ~3d"). A pace that lasts the window says so, with no
   number. The number is time until empty, not time past the reset.

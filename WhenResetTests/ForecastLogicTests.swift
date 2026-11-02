@@ -346,6 +346,24 @@ final class ForecastLogicTests: XCTestCase {
             UpdatedCaption.phrase(since: updated.addingTimeInterval(-12), now: updated),
             "Updated 12s ago"
         )
+        let expiry = updated.addingTimeInterval(4 * 3_600 + 59 * 60)
+        XCTAssertEqual(
+            BankedResetCopy.collapsedLine(count: 1, expiresAt: expiry, now: updated),
+            "1 banked reset · expires in 4h 59m"
+        )
+        XCTAssertEqual(
+            BankedResetCopy.collapsedLine(count: 2, expiresAt: expiry, now: updated),
+            "2 banked resets · next expires in 4h 59m"
+        )
+        useChinese()
+        XCTAssertEqual(
+            BankedResetCopy.collapsedLine(count: 1, expiresAt: expiry, now: updated),
+            "1 个已存储的重置 · 4 小时 59 分后过期"
+        )
+        XCTAssertEqual(
+            BankedResetCopy.collapsedLine(count: 2, expiresAt: expiry, now: updated),
+            "2 个已存储的重置 · 最近一个 4 小时 59 分后过期"
+        )
     }
 
     func testFastStatedWindowShowsExhaustionBesideAQuietWeek() {

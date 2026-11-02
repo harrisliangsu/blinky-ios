@@ -668,48 +668,83 @@ private struct UsageFooter: View {
             status: codex.display(at: date),
             now: date
         )
-        return VStack(alignment: .leading, spacing: 4) {
-            if showsBanked || title != nil {
-                VStack(alignment: .leading, spacing: 6) {
-                    Button {
-                        expanded.toggle()
-                    } label: {
-                        HStack(alignment: .center, spacing: 8) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                if let title {
-                                    Text(title)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                if showsBanked {
-                                    BankedResetSummary(snapshot: snapshot, now: date)
-                                }
-                            }
-                            Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                                .accessibilityHidden(true)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(title == nil ? "usage-more-banked" : "forecasts-disclosure")
-                    if expanded {
-                        if showsBanked {
-                            BankedResetDetails(snapshot: snapshot, now: date)
-                        }
-                        ForecastCardExtras(snapshot: snapshot)
+        let banked = showsBanked
+            ? BankedResetCopy.collapsedLine(
+                count: max(snapshot.availableResetCount, snapshot.availableResetCredits.count),
+                expiresAt: snapshot.nextBankedResetCredit(after: date)?.expiresAt,
+                now: date
+            )
+            : nil
+        let updated = UpdatedCaption.phrase(since: snapshot.fetchedAt, now: date)
+        return VStack(alignment: .leading, spacing: 6) {
+            if title != nil || banked != nil {
+                Button {
+                    expanded.toggle()
+                } label: {
+                    HStack(alignment: .center, spacing: 8) {
+                        UsageFooterLines(forecast: title, banked: banked, updated: updated)
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
                     }
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(title == nil ? "usage-more-banked" : "forecasts-disclosure")
+                if expanded {
+                    if showsBanked {
+                        BankedResetDetails(snapshot: snapshot, now: date)
+                    }
+                    ForecastCardExtras(snapshot: snapshot)
+                }
+            } else {
+                updatedCaption(updated)
             }
-            Text(UpdatedCaption.phrase(since: snapshot.fetchedAt, now: date))
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityIdentifier("usage-updated")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func updatedCaption(_ updated: String) -> some View {
+        Text(updated)
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .lineLimit(1)
+            .accessibilityIdentifier("usage-updated")
+    }
+}
+
+/// Forecast, then banked reset. Updated sits on the last of those lines.
+private struct UsageFooterLines: View {
+    var forecast: String?
+    var banked: String?
+    var updated: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let forecast, banked != nil {
+                line(forecast)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if let text = banked ?? forecast {
+                    line(text)
+                }
+                Spacer(minLength: 8)
+                Text(updated)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                    .accessibilityIdentifier("usage-updated")
+            }
+        }
+    }
+
+    private func line(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -789,31 +824,6 @@ struct APIBalanceRow: View {
             return "\(amount.formatted(.number.grouping(.automatic).precision(.fractionLength(0)))) \(unit)"
         }
         return formatted(amount, currencyCode: balance.currencyCode)
-    }
-}
-
-private struct BankedResetSummary: View {
-    let snapshot: UsageSnapshot
-    var now: Date
-
-    private var count: Int { max(snapshot.availableResetCount, snapshot.availableResetCredits.count) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(count == 1
-                 ? String.localized("1 banked reset")
-                 : String(format: String.localized("%lld banked resets"), locale: AppLanguage.current.locale, Int64(count)))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            if let expiry = snapshot.nextBankedResetCredit()?.expiresAt {
-                Text(CountdownDisplay.string(until: expiry, from: now))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
