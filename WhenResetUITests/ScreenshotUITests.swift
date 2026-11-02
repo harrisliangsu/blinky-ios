@@ -101,9 +101,8 @@ final class ScreenshotUITests: XCTestCase {
             let style = app.staticTexts["Interface style"]
             let chineseStyle = app.staticTexts["界面风格"]
             XCTAssertTrue(style.exists || chineseStyle.waitForExistence(timeout: 4))
-            let glass = app.staticTexts["Liquid Glass"]
-            let chineseGlass = app.staticTexts["液态玻璃"]
-            XCTAssertTrue(glass.exists || chineseGlass.exists)
+            let selected = selectedInterfaceStyleTitle(language: language, interfaceStyle: interfaceStyle)
+            XCTAssertTrue(app.staticTexts[selected].waitForExistence(timeout: 4))
             let bars = app.staticTexts["Progress bars"]
             let chineseBars = app.staticTexts["进度条"]
             XCTAssertTrue(bars.exists || chineseBars.exists)
@@ -211,6 +210,19 @@ final class ScreenshotUITests: XCTestCase {
             row.tap()
         } else {
             chineseRow.tap()
+        }
+    }
+
+    /// The appearance picker shows only the selected style until it is opened.
+    private func selectedInterfaceStyleTitle(language: String, interfaceStyle: String) -> String {
+        let chinese = language == "zh-Hans"
+        switch interfaceStyle {
+        case "classic":
+            return chinese ? "经典" : "Classic"
+        case "screenTime":
+            return chinese ? "屏幕使用时间" : "Screen Time"
+        default:
+            return chinese ? "液态玻璃" : "Liquid Glass"
         }
     }
 }
