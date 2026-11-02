@@ -11,6 +11,9 @@ API_ROOT = "https://api.appstoreconnect.apple.com"
 EMAIL = ENV.fetch("BETA_TESTER_EMAIL", "sharkchili.su@gmail.com")
 BUNDLE_ID = ENV.fetch("APP_BUNDLE_ID", "com.harrisliangsu.whenreset")
 INTERNAL_GROUP = ENV.fetch("TESTFLIGHT_GROUP_NAME", "Internal Testers")
+EXTERNAL_GROUP = ENV.fetch("EXTERNAL_GROUP_NAME", "External Testers")
+MARKETING_VERSION = ENV.fetch("MARKETING_VERSION", "1.8")
+BUILD_NUMBER = ENV.fetch("BUILD_NUMBER", "2")
 
 def required_env(name)
   value = ENV[name]
@@ -115,6 +118,154 @@ def urls_in(value, found = [])
   found
 end
 
+def find_ios_build(token, app_id)
+  versions = expect(
+    *request_json(
+      :get,
+      api_path("/v1/preReleaseVersions", { "filter[app]" => app_id, "filter[version]" => MARKETING_VERSION, "filter[platform]" => "IOS", "limit" => "20" }),
+      token
+    ),
+    "List prerelease versions"
+  ).fetch("data")
+  versions.each do |version|
+    builds = expect(
+      *request_json(:get, api_path("/v1/builds", { "filter[preReleaseVersion]" => version.fetch("id"), "filter[version]" => BUILD_NUMBER, "limit" => "20" }), token),
+      "List builds"
+    ).fetch("data")
+    found = builds.find { |build| build.dig("attributes", "version") == BUILD_NUMBER }
+    return found if found
+  end
+  nil
+end
+
+def ensure_external_group(token, app_id, groups)
+  external = groups.find { |group| group.dig("attributes", "name") == EXTERNAL_GROUP && group.dig("attributes", "isInternalGroup") == false }
+  return external if external
+
+  code, body = request_json(
+    :post,
+    "/v1/betaGroups",
+    token,
+    {
+      data: {
+        type: "betaGroups",
+        attributes: { name: EXTERNAL_GROUP, isInternalGroup: false, publicLinkEnabled: false, feedbackEnabled: true },
+        relationships: { app: { data: { type: "apps", id: app_id } } }
+      }
+    }
+  )
+  created = expect(code, body, "Create external group").fetch("data")
+  puts "CREATED_EXTERNAL_GROUP id=#{created.fetch("id")}"
+  created
+end
+
+def assign_build_to_group(token, group_id, build)
+  code, body = request_json(
+    :post,
+    "/v1/betaGroups/#{group_id}/relationships/builds",
+    token,
+    { data: [{ type: "builds", id: build.fetch("id") }] }
+  )
+  puts "ASSIGN_BUILD HTTP #{code} #{error_text(body) unless code.between?(200, 299) || code == 409}"
+  code
+end
+
+def ensure_export_compliance(token, build)
+  return build unless build.dig("attributes", "usesNonExemptEncryption").nil?
+
+  code, body = request_json(
+    :patch,
+    "/v1/builds/#{build.fetch("id")}",
+    token,
+    { data: { type: "builds", id: build.fetch("id"), attributes: { usesNonExemptEncryption: false } } }
+  )
+  puts "EXPORT_COMPLIANCE HTTP #{code} #{error_text(body) unless code.between?(200, 299)}"
+  code.between?(200, 299) ? body.fetch("data") : build
+end
+
+def submit_beta_review(token, app_id, build)
+  review_code, review_body = request_json(:get, "/v1/builds/#{build.fetch("id")}/betaAppReviewSubmission", token)
+  existing = review_code == 200 ? review_body["data"] : nil
+  state = existing&.dig("attributes", "betaReviewState")
+  puts "EXISTING_BETA_REVIEW HTTP #{review_code} state=#{state.inspect}"
+  if existing && state != "REJECTED"
+    puts "BETA_REVIEW_STATE #{state}"
+    return
+  end
+
+  detail_code, detail_body = request_json(:get, "/v1/apps/#{app_id}/betaAppReviewDetail", token)
+  puts "BETA_REVIEW_DETAIL HTTP #{detail_code}"
+  detail = detail_code == 200 ? detail_body["data"] : nil
+  if detail
+    attributes = detail.fetch("attributes")
+    puts "BETA_REVIEW_CONTACT email=#{attributes["contactEmail"].inspect} phone_present=#{!attributes["contactPhone"].to_s.empty?} notes_present=#{!attributes["notes"].to_s.empty?}"
+    needs = attributes["contactEmail"].to_s.empty? || attributes["contactFirstName"].to_s.empty? || attributes["contactLastName"].to_s.empty?
+    if needs
+      patch = {}
+      patch[:contactEmail] = EMAIL if attributes["contactEmail"].to_s.empty?
+      patch[:contactFirstName] = "Kong" if attributes["contactFirstName"].to_s.empty?
+      patch[:contactLastName] = "Yi" if attributes["contactLastName"].to_s.empty?
+      patch[:demoAccountRequired] = false if attributes["demoAccountRequired"].nil?
+      patch[:notes] = "Blinky shows provider usage limits. No demo account is required; the first screen is an empty usage list until an account is connected." if attributes["notes"].to_s.empty?
+      patch_code, patch_body = request_json(
+        :patch,
+        "/v1/betaAppReviewDetails/#{detail.fetch("id")}",
+        token,
+        { data: { type: "betaAppReviewDetails", id: detail.fetch("id"), attributes: patch } }
+      )
+      puts "BETA_REVIEW_CONTACT_PATCH HTTP #{patch_code} #{error_text(patch_body) unless patch_code.between?(200, 299)}"
+    end
+  end
+
+  submit_code, submit_body = request_json(
+    :post,
+    "/v1/betaAppReviewSubmissions",
+    token,
+    { data: { type: "betaAppReviewSubmissions", relationships: { build: { data: { type: "builds", id: build.fetch("id") } } } } }
+  )
+  submitted_state = submit_body.dig("data", "attributes", "betaReviewState")
+  puts "BETA_REVIEW_SUBMIT HTTP #{submit_code} state=#{submitted_state.inspect} #{error_text(submit_body) unless submit_code.between?(200, 299)}"
+  puts "BETA_REVIEW_STATE #{submitted_state || "NOT_SUBMITTED"}"
+end
+
+def invite_external(token, app_id, groups, first_name, last_name)
+  external = ensure_external_group(token, app_id, groups)
+  puts "EXTERNAL_GROUP id=#{external.fetch("id")} name=#{external.dig("attributes", "name")}"
+  members_code, members_body = request_json(:get, "/v1/betaGroups/#{external.fetch("id")}/betaTesters?limit=200", token)
+  members = members_code == 200 ? members_body.fetch("data") : []
+  existing = members.find { |tester| tester.dig("attributes", "email").to_s.casecmp(EMAIL).zero? }
+  if existing
+    puts "EXTERNAL_TESTER_ALREADY id=#{existing.fetch("id")} state=#{existing.dig("attributes", "state")} email=#{existing.dig("attributes", "email")}"
+    puts "INVITE_ALREADY_PRESENT id=#{existing.fetch("id")}"
+    tester_id = existing.fetch("id")
+  else
+    code, body = create_internal_tester(token, EMAIL, first_name, last_name, [external.fetch("id")])
+    puts "EXTERNAL_CREATE HTTP #{code} id=#{body.dig("data", "id")} state=#{body.dig("data", "attributes", "state")} #{error_text(body) unless code.between?(200, 299)}"
+    raise "External tester create failed" unless code.between?(200, 299)
+
+    tester_id = body.dig("data", "id")
+    puts "INVITE_SENT external tester id=#{tester_id} email=#{EMAIL}"
+  end
+  puts "EXTERNAL_TESTER_ID #{tester_id}"
+  puts "EXTERNAL_TESTER_ID_DIFFERS_FROM_INTERNAL #{tester_id != OLD_TESTER_ID}"
+
+  build = find_ios_build(token, app_id)
+  raise "Build #{MARKETING_VERSION} (#{BUILD_NUMBER}) was not found" unless build
+
+  puts "BUILD id=#{build.fetch("id")} version=#{build.dig("attributes", "version")} processing=#{build.dig("attributes", "processingState")} encryption=#{build.dig("attributes", "usesNonExemptEncryption").inspect}"
+  build = ensure_export_compliance(token, build)
+  detail_code, detail_body = request_json(:get, "/v1/builds/#{build.fetch("id")}/buildBetaDetail", token)
+  if detail_code == 200
+    attributes = detail_body.dig("data", "attributes") || {}
+    puts "BUILD_BETA internal=#{attributes["internalBuildState"]} external=#{attributes["externalBuildState"]}"
+  else
+    puts "BUILD_BETA HTTP #{detail_code}: #{error_text(detail_body)}"
+  end
+  assign_build_to_group(token, external.fetch("id"), build)
+  submit_beta_review(token, app_id, build)
+  puts "INTERNAL_MEMBERSHIP_UNCHANGED tester=#{OLD_TESTER_ID}"
+end
+
 def create_internal_tester(token, email, first_name, last_name, group_ids)
   request_json(
     :post,
@@ -193,6 +344,17 @@ internal_groups.each do |group|
     attributes = build.fetch("attributes")
     puts "GROUP_BUILD group=#{group.dig("attributes", "name").inspect} id=#{build.fetch("id")} version=#{attributes["version"]} processing=#{attributes["processingState"]}"
   end
+end
+
+if ENV["EXTERNAL_INVITE"] == "1"
+  raise "No App Store Connect user uses Apple ID #{EMAIL}" unless gmail_user
+
+  first_name = gmail_user.dig("attributes", "firstName").to_s
+  first_name = "Kong" if first_name.empty?
+  last_name = gmail_user.dig("attributes", "lastName").to_s
+  last_name = "Yi" if last_name.empty?
+  invite_external(token, app_id, groups, first_name, last_name)
+  exit 0
 end
 
 all_code, all_body = request_json(:get, api_path("/v1/betaTesters", { "limit" => "200" }), token)

@@ -1,6 +1,9 @@
 name: Reinvite internal tester
 
 on:
+  push:
+    branches:
+      - cursor/reinvite-tester-22f5
   workflow_dispatch:
 
 permissions:
@@ -44,6 +47,7 @@ jobs:
           BETA_TESTER_EMAIL: sharkchili.su@gmail.com
           MARKETING_VERSION: "1.8"
           BUILD_NUMBER: "2"
+          EXTERNAL_INVITE: "1"
         run: ruby .github/scripts/reinvite-beta-tester.rb
 
       - name: Remove temporary credential
