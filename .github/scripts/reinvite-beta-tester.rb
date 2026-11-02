@@ -230,6 +230,11 @@ first_name = "Kong" if first_name.empty?
 last_name = gmail_user.dig("attributes", "lastName").to_s
 last_name = "Yi" if last_name.empty?
 
+if ENV["FORCE_RECREATE"] != "1"
+  puts "FORCE_RECREATE is not set. No tester was deleted."
+  exit 0
+end
+
 if ENV["ENSURE_BLINKY_ONLY"] == "1"
   blinky = internal_groups.find { |group| group.dig("attributes", "name") == "Blinky Internal" }
   raise "Blinky Internal group was not found" unless blinky
