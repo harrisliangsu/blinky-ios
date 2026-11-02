@@ -41,4 +41,18 @@ final class UsageBarTests: XCTestCase {
         }
         XCTAssertEqual(UsageBarStyle.current, .continuous)
     }
+
+    func testInterfaceStylesUseDifferentContinuousMeters() {
+        let classic = InterfaceStyle.classic.continuousMeter(prominent: true)
+        let screenTime = InterfaceStyle.screenTime.continuousMeter(prominent: true)
+        let glass = InterfaceStyle.liquidGlass.continuousMeter(prominent: true)
+        XCTAssertEqual(classic.cap, .round)
+        XCTAssertEqual(screenTime.cap, .square)
+        XCTAssertEqual(glass.cap, .round)
+        XCTAssertGreaterThan(screenTime.height, classic.height)
+        XCTAssertGreaterThan(screenTime.height, glass.height)
+        XCTAssertGreaterThan(glass.trackOpacity, classic.trackOpacity)
+        XCTAssertNotEqual(classic, screenTime)
+        XCTAssertNotEqual(screenTime, glass)
+    }
 }

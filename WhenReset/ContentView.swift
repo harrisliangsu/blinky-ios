@@ -225,28 +225,39 @@ private struct UsageTabView: View {
                 Section {
                     if editingAccountOrder {
                         AccountReorderRow(account: account)
+                            .modifier(UsageAccountChrome(style: interfaceStyle))
                     } else {
-                        if let failure {
-                            AccountFailureView(
-                                account: account,
-                                failure: failure,
-                                cachedAt: snapshot?.fetchedAt,
-                                retry: { Task { await store.refresh(account) } },
-                                relink: { relinkingAccount = account },
-                                remove: { accountPendingRemoval = account }
-                            )
+                        VStack(alignment: .leading, spacing: interfaceStyle == .liquidGlass ? 10 : 4) {
+                            if interfaceStyle == .liquidGlass {
+                                ProviderSectionHeader(
+                                    account: account,
+                                    plan: snapshot?.plan ?? account.plan,
+                                    failure: failure
+                                )
+                            }
+                            if let failure {
+                                AccountFailureView(
+                                    account: account,
+                                    failure: failure,
+                                    cachedAt: snapshot?.fetchedAt,
+                                    retry: { Task { await store.refresh(account) } },
+                                    relink: { relinkingAccount = account },
+                                    remove: { accountPendingRemoval = account }
+                                )
+                            }
+                            if let snapshot {
+                                UsageCard(snapshot: snapshot.filtered(using: store.settings(for: account)))
+                            } else if failure == nil {
+                                HStack { ProgressView(); Text("Loading usage…").foregroundStyle(.secondary) }
+                            } else {
+                                Label("No cached usage is available", systemImage: "tray")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        if let snapshot {
-                            UsageCard(snapshot: snapshot.filtered(using: store.settings(for: account)))
-                        } else if failure == nil {
-                            HStack { ProgressView(); Text("Loading usage…").foregroundStyle(.secondary) }
-                        } else {
-                            Label("No cached usage is available", systemImage: "tray")
-                                .foregroundStyle(.secondary)
-                        }
+                        .modifier(UsageAccountChrome(style: interfaceStyle))
                     }
                 } header: {
-                    if !editingAccountOrder {
+                    if interfaceStyle != .liquidGlass, !editingAccountOrder {
                         ProviderSectionHeader(
                             account: account,
                             plan: snapshot?.plan ?? account.plan,
@@ -270,8 +281,15 @@ private struct UsageTabView: View {
                 store.moveAccounts(from: offsets, to: destination)
             }
         }
-        .accessibilityIdentifier("usage-list")
+        .overlay(alignment: .topLeading) {
+            Text(verbatim: interfaceStyle.rawValue)
+                .font(.system(size: 1))
+                .foregroundStyle(.clear)
+                .accessibilityIdentifier("usage-style-\(interfaceStyle.rawValue)")
+                .accessibilityHidden(false)
+        }
         .listStyle(.insetGrouped)
+        .modifier(UsageListSurface(style: interfaceStyle))
         .environment(\.editMode, .constant(editingAccountOrder ? .active : .inactive))
     }
 }
@@ -448,13 +466,22 @@ private struct ProviderSectionHeader: View {
     let plan: String?
     let failure: AccountRefreshFailure?
 
+    @Environment(\.interfaceStyle) private var interfaceStyle
+
     var body: some View {
         HStack(spacing: 7) {
             ProviderIcon(providerID: account.providerID, symbolName: account.customSymbolName)
-                .frame(width: 28, height: 28)
+                .frame(width: interfaceStyle == .screenTime ? 36 : 28, height: interfaceStyle == .screenTime ? 36 : 28)
+                .padding(interfaceStyle == .screenTime ? 4 : 0)
+                .background {
+                    if interfaceStyle == .screenTime {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.16))
+                    }
+                }
             VStack(alignment: .leading, spacing: 1) {
                 Text(account.resolvedDisplayName)
-                    .font(.headline)
+                    .font(interfaceStyle == .screenTime ? .title3.weight(.semibold) : .headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(account.providerSectionTitle(plan: plan))
@@ -580,7 +607,7 @@ struct UsageCard: View {
     @Environment(\.interfaceStyle) private var interfaceStyle
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: interfaceStyle == .screenTime ? 16 : 12) {
             if let balance = snapshot.apiBalance {
                 APIBalanceRow(balance: balance)
             }
@@ -589,22 +616,42 @@ struct UsageCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if interfaceStyle == .screenTime {
+                screenTimeLimits
             } else {
                 ForEach(Array(snapshot.usageWindows.enumerated()), id: \.offset) { _, window in
-                    LimitRow(window: window)
+                    LimitRow(window: window, prominent: interfaceStyle == .liquidGlass)
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                UsageMoreSection(snapshot: snapshot)
-                ForecastCardExtras(snapshot: snapshot)
-                HStack { Text("Updated"); Spacer(); Text(snapshot.fetchedAt, style: .relative) }
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            extras
+                .modifier(UsageExtrasChrome(style: interfaceStyle))
+        }
+        .padding(.vertical, interfaceStyle == .classic ? 2 : 4)
+    }
+
+    private var screenTimeLimits: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let primary = snapshot.usageWindows.first {
+                ScreenTimeHero(window: primary)
             }
-            .padding(.horizontal, interfaceStyle == .classic ? 0 : 10)
-            .padding(.vertical, interfaceStyle == .classic ? 2 : 8)
-            .modifier(UsageExtrasChrome(style: interfaceStyle))
-        }.padding(.vertical, 6)
+            ForEach(Array(snapshot.usageWindows.dropFirst().enumerated()), id: \.offset) { _, window in
+                ScreenTimeCategoryRow(window: window)
+            }
+        }
+    }
+
+    private var extras: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            UsageMoreSection(snapshot: snapshot)
+            ForecastCardExtras(snapshot: snapshot)
+            HStack {
+                Text("Updated")
+                Spacer()
+                Text(snapshot.fetchedAt, style: .relative)
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+        }
     }
 }
 
@@ -784,10 +831,8 @@ private struct BankedResetBar: View {
 
 struct LimitRow: View {
     let window: UsageWindow
+    var prominent = false
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.interfaceStyle) private var interfaceStyle
-
-    private var prominent: Bool { interfaceStyle != .classic }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -807,13 +852,90 @@ struct LimitRow: View {
                 }
                 Text(UsageText.remainingPercent(window.remainingPercent))
                     .font((prominent ? Font.title2 : Font.title3).bold().monospacedDigit())
-                    .foregroundStyle(UsageMeterTint.color(
-                        remainingFraction: window.remainingPercent / 100,
-                        colorScheme: colorScheme
-                    ))
+                    .foregroundStyle(tint)
                 UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: prominent)
             }
         }
+    }
+
+    private var tint: Color {
+        UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
+    }
+}
+
+/// Screen Time's primary reading: a small label, a large figure, then a block bar.
+private struct ScreenTimeHero: View {
+    let window: UsageWindow
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(alignment: .leading, spacing: 4) {
+                Text(window.displayTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+                    .lineLimit(1)
+                Text(UsageText.remainingPercent(window.remainingPercent))
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if window.showsCountdown {
+                    Text(CountdownDisplay.usageString(until: window.resetsAt, from: context.date))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: true)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private var tint: Color {
+        UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
+    }
+}
+
+/// A Screen Time subcategory: a color rail, the name, and a shorter block bar.
+private struct ScreenTimeCategoryRow: View {
+    let window: UsageWindow
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(tint)
+                    .frame(width: 4)
+                    .frame(minHeight: 36)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(window.displayTitle)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(UsageText.remainingPercent(window.remainingPercent))
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(tint)
+                    }
+                    if window.showsCountdown {
+                        Text(CountdownDisplay.usageString(until: window.resetsAt, from: context.date))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: false)
+                }
+            }
+        }
+    }
+
+    private var tint: Color {
+        UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
     }
 }
 
@@ -824,44 +946,20 @@ private struct UsageExtrasChrome: ViewModifier {
         switch style {
         case .classic:
             content
+                .padding(.top, 4)
                 .overlay(alignment: .top) { Divider() }
         case .screenTime:
-            content.background(
-                Color.primary.opacity(0.05),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
+            content
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Color.primary.opacity(0.06),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
         case .liquidGlass:
-            content.blinkyInsetGlass()
-        }
-    }
-}
-
-private extension View {
-    /// Frosted inset for secondary card details. iOS 26 uses system glass;
-    /// earlier systems use the ultra-thin material.
-    @ViewBuilder
-    func blinkyInsetGlass() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        if #available(iOS 26, *) {
-            self.glassEffect(.regular, in: shape)
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
-        }
-    }
-
-    /// System navigation glass on iOS 26. Older systems get an explicit material.
-    @ViewBuilder
-    func blinkyNavigationGlass(_ style: InterfaceStyle) -> some View {
-        if style == .liquidGlass {
-            if #available(iOS 26, *) {
-                self
-            } else {
-                self
-                    .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-                    .toolbarBackground(.visible, for: .navigationBar)
-            }
-        } else {
-            self
+            content
+                .padding(10)
+                .blinkyInsetGlass()
         }
     }
 }

@@ -47,6 +47,7 @@ struct TokenActivitySettingsView: View {
             } header: {
                 Text("Token activity")
             }
+            .blinkySettingsSection()
 
             if let performance {
                 Section {
@@ -54,8 +55,10 @@ struct TokenActivitySettingsView: View {
                 } header: {
                     Text("Performance")
                 }
+                .blinkySettingsSection()
             }
         }
+        .blinkySettingsCanvas()
         .navigationTitle("Token activity")
         .navigationBarTitleDisplayMode(.inline)
     }

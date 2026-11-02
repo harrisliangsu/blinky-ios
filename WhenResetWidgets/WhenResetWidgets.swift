@@ -576,8 +576,10 @@ struct UsageWidget: Widget {
         AppIntentConfiguration(kind: "UsageWidget", intent: UsageWidgetConfigurationIntent.self,
                                provider: UsageWidgetProvider()) { entry in
             HomeWidgetView(entry: entry)
+                .containerBackground(for: .widget) {
+                    InterfaceWidgetBackground()
+                }
                 .blinkyUsageChrome()
-                .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Usage limits")
         .description("Choose an account, quota, and market-inspired presentation.")
@@ -678,51 +680,10 @@ private struct UsageListHomeWidget: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: family == .systemMedium ? 5 : 6) {
-            Text("Usage")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-            ForEach(rows, id: \.accountID) { snapshot in
-                usageRow(snapshot)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func usageRow(_ snapshot: UsageSnapshot) -> some View {
-        let headline = snapshot.headlineWindow(pinnedMetricID: nil)
-        let secondary = headline.flatMap { snapshot.secondaryLimit(after: $0) }
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                SnapshotAccountIcon(snapshot: snapshot).frame(width: 16, height: 16)
-                Text(snapshot.resolvedAccountName).font(.caption.weight(.semibold)).lineLimit(1)
-                Spacer(minLength: 4)
-                if let headline {
-                    if headline.showsCountdown {
-                        Text(CountdownDisplay.compactString(until: headline.resetsAt))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Text(UsageText.remainingPercent(headline.remainingPercent))
-                        .font(.caption.monospacedDigit())
-                        .lineLimit(1)
-                }
-            }
-            if let headline {
-                UsageMeter(remainingFraction: headline.remainingPercent / 100)
-                if family == .systemLarge, let secondary {
-                    HStack {
-                        Text(secondary.displayTitle).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(UsageText.remainingPercent(secondary.remainingPercent))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
-        }
+        StyledMultiAccountList(
+            snapshots: rows,
+            showsSecondLimit: family == .systemLarge
+        )
     }
 }
 
@@ -2186,8 +2147,36 @@ private struct LiveActivityBackground: ViewModifier {
 private struct LiveAccountBar: View {
     let account: UsageActivityAccountRow
     var onDarkSurface = false
+    @Environment(\.interfaceStyle) private var interfaceStyle
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        switch interfaceStyle {
+        case .classic:
+            stack
+        case .screenTime:
+            HStack(alignment: .top, spacing: 8) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(tint)
+                    .frame(width: 4)
+                stack
+            }
+        case .liquidGlass:
+            if onDarkSurface {
+                stack
+            } else {
+                stack
+                    .padding(8)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.45), lineWidth: 0.5)
+                    }
+            }
+        }
+    }
+
+    private var stack: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 ProviderMark(providerID: account.providerID, symbolName: account.symbolName)
@@ -2197,7 +2186,7 @@ private struct LiveAccountBar: View {
                     Text(UsageText.soonestBadge())
                         .font(.caption2.weight(.bold))
                         .padding(.horizontal, 4)
-                        .background(.orange.opacity(0.35), in: .capsule)
+                        .background(.orange.opacity(onDarkSurface ? 0.35 : 0.85), in: .capsule)
                 }
                 Spacer(minLength: 4)
                 if let reset = account.headlineResetsAt {
@@ -2206,9 +2195,13 @@ private struct LiveAccountBar: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(UsageText.remainingPercent(account.headlineRemainingPercent))
-                    .font(.caption.monospacedDigit())
+                    .font((interfaceStyle == .screenTime ? Font.subheadline.weight(.bold) : Font.caption).monospacedDigit())
+                    .foregroundStyle(interfaceStyle == .screenTime ? AnyShapeStyle(tint) : AnyShapeStyle(.primary))
             }
-            UsageMeter(remainingFraction: account.headlineRemainingPercent / 100)
+            UsageMeter(
+                remainingFraction: account.headlineRemainingPercent / 100,
+                prominent: interfaceStyle == .screenTime
+            )
             if let secondary = account.secondaryTitle, let percent = account.secondaryRemainingPercent {
                 Text("\(secondary) \(UsageText.remainingPercent(percent))")
                     .font(.caption2)
@@ -2217,6 +2210,13 @@ private struct LiveAccountBar: View {
             }
         }
         .foregroundStyle(onDarkSurface ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+    }
+
+    private var tint: Color {
+        UsageMeterTint.color(
+            remainingFraction: account.headlineRemainingPercent / 100,
+            colorScheme: onDarkSurface ? .dark : colorScheme
+        )
     }
 }
 

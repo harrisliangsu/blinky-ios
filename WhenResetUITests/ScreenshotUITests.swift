@@ -26,6 +26,26 @@ final class ScreenshotUITests: XCTestCase {
             shot(language: language, appearance: appearance, screen: "deviceCode", name: "\(name)-04-device-code")
             shot(language: language, appearance: appearance, screen: "settings", name: "\(name)-05-settings")
             shot(language: language, appearance: appearance, screen: "settingsRoot", name: "\(name)-07-settings-root")
+            if language == "en" {
+                for style in ["classic", "screenTime", "liquidGlass"] {
+                    shot(
+                        language: language,
+                        appearance: appearance,
+                        interfaceStyle: style,
+                        screen: "settingsRoot",
+                        name: "\(name)-settings-\(style)"
+                    )
+                    if appearance == "light" {
+                        shot(
+                            language: language,
+                            appearance: appearance,
+                            interfaceStyle: style,
+                            screen: "settings",
+                            name: "\(name)-appearance-\(style)"
+                        )
+                    }
+                }
+            }
             shot(language: language, appearance: appearance, screen: "about", name: "\(name)-08-about")
             shot(language: language, appearance: appearance, screen: "notifications", name: "\(name)-09-notifications")
             shot(language: language, appearance: appearance, screen: "forecasts", name: "\(name)-06-forecasts")
@@ -154,6 +174,9 @@ final class ScreenshotUITests: XCTestCase {
             XCTAssertTrue(done.waitForExistence(timeout: 12) || chineseDone.waitForExistence(timeout: 4))
         default:
             XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 15))
+            XCTAssertTrue(
+                app.descendants(matching: .any)["usage-style-\(interfaceStyle)"].waitForExistence(timeout: 8)
+            )
         }
 
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))

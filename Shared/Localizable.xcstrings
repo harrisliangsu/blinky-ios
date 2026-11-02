@@ -657,18 +657,18 @@
         }
       }
     },
-    "Classic is a plain list. Screen Time sets the meter apart from the extra lines. Liquid Glass uses the system glass.": {
+    "Classic is a system list. Screen Time uses a large figure and category rows. Liquid Glass floats each account on glass.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Classic is a plain list. Screen Time sets the meter apart from the extra lines. Liquid Glass uses the system glass."
+            "value": "Classic is a system list. Screen Time uses a large figure and category rows. Liquid Glass floats each account on glass."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "经典是普通列表。屏幕使用时间把额度条和附加信息分开。液态玻璃使用系统玻璃。"
+            "value": "经典是系统列表。屏幕使用时间用大号数字和分类行。液态玻璃让每个账号浮在玻璃上。"
           }
         }
       }
