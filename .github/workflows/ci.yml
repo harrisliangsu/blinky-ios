@@ -71,6 +71,10 @@ jobs:
 
   app:
     name: iOS and macOS
+    # Temporary: a PR title containing [shots-only] skips this job so the
+    # screenshot workflow can take the scarce macOS runner. Remove after
+    # the style screenshots are saved.
+    if: ${{ !contains(github.event.pull_request.title, '[shots-only]') }}
     runs-on: macos-26
     timeout-minutes: 45
     env:
