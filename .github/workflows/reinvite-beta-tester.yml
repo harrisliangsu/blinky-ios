@@ -1,6 +1,9 @@
 name: Reinvite internal tester
 
 on:
+  push:
+    branches:
+      - cursor/reinvite-tester-22f5
   workflow_dispatch:
 
 permissions:
