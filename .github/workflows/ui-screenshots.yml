@@ -15,13 +15,17 @@ concurrency:
 jobs:
   screenshots:
     name: Simulator screenshots
-    runs-on: macos-26
+    # Same runner choice as CI: macos-15 has Xcode 26, and macos-26's arm64
+    # pool is what GitHub cancels after 15 minutes with no runner. This
+    # timeout starts when the job starts, not while it is queued.
+    runs-on: macos-15
     timeout-minutes: 45
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        uses: ./.github/actions/select-xcode
 
       - name: Generate the Xcode project
         run: |

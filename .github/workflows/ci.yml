@@ -71,13 +71,20 @@ jobs:
 
   app:
     name: iOS and macOS
-    runs-on: macos-26
+    # macos-15 is the long-standing hosted image and still has Xcode 26.3.
+    # macos-26 is generally available, but its arm64 pool is the one that
+    # sits with runner_id 0 and is cancelled at 15 minutes before any step
+    # runs. timeout-minutes below starts only after a runner starts the job;
+    # it is not a queue limit. concurrency cancels this job only when a newer
+    # push on the same ref starts another run.
+    runs-on: macos-15
     timeout-minutes: 45
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        uses: ./.github/actions/select-xcode
 
       - name: Verify toolchain
         run: |
