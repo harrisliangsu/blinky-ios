@@ -117,7 +117,11 @@ struct UsageListSurface: ViewModifier {
     var style: InterfaceStyle
     @Environment(\.colorScheme) private var colorScheme
 
+    @ViewBuilder
     func body(content: Content) -> some View {
+        // `insetGrouped` is iOS-only. The Mac widget compiles this file and
+        // does not draw the usage list.
+        #if os(iOS)
         switch style {
         case .classic:
             content
@@ -143,6 +147,9 @@ struct UsageListSurface: ViewModifier {
                 .scrollContentBackground(.hidden)
                 .background(InterfaceGlassBackdrop())
         }
+        #else
+        content
+        #endif
     }
 }
 
