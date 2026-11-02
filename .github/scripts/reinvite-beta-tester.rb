@@ -230,52 +230,35 @@ first_name = "Kong" if first_name.empty?
 last_name = gmail_user.dig("attributes", "lastName").to_s
 last_name = "Yi" if last_name.empty?
 
-internal_groups.each do |group|
-  testers.each do |tester|
-    remove_code, remove_body = request_json(
-      :delete,
-      "/v1/betaGroups/#{group.fetch("id")}/relationships/betaTesters",
-      token,
-      { data: [{ type: "betaTesters", id: tester.fetch("id") }] }
-    )
-    puts "REMOVED_FROM_GROUP group=#{group.dig("attributes", "name").inspect} tester=#{tester.fetch("id")} HTTP #{remove_code} #{error_text(remove_body) unless remove_code.between?(200, 299) || remove_code == 404 || remove_code == 409}"
-  end
-end
+delete_code, delete_body = request_json(:delete, "/v1/betaTesters/#{OLD_TESTER_ID}", token)
+puts "DELETE_BETA_TESTER id=#{OLD_TESTER_ID} HTTP #{delete_code} #{error_text(delete_body) unless delete_code.between?(200, 299) || delete_code == 404}"
+raise "DELETE betaTester failed HTTP #{delete_code}" unless delete_code.between?(200, 299) || delete_code == 404
 
-tester_ids = (testers.map { |tester| tester.fetch("id") } + [OLD_TESTER_ID]).uniq
-tester_ids.each do |tester_id|
-  delete_code, delete_body = request_json(:delete, "/v1/betaTesters/#{tester_id}", token)
-  dump("DELETE betaTester #{tester_id}", delete_code, delete_body)
-  puts "DELETED_TESTER id=#{tester_id} HTTP #{delete_code}"
-end
-
-gone = false
-12.times do |attempt|
-  sleep 5
-  get_code, get_body = request_json(:get, "/v1/betaTesters/#{OLD_TESTER_ID}", token)
+deadline = Time.now + 300
+attempt = 0
+list_empty = false
+while Time.now < deadline
+  sleep 15
+  attempt += 1
   list_code, list_body = request_json(:get, api_path("/v1/betaTesters", { "filter[email]" => EMAIL, "limit" => "20" }), token)
-  remaining = list_code == 200 ? list_body.fetch("data").map { |tester| "#{tester.fetch("id")}:#{tester.dig("attributes", "state")}" } : ["HTTP #{list_code}"]
-  puts "POLL #{attempt + 1} old_get=#{get_code} email_testers=#{remaining.inspect}"
-  walk_qq(get_body, "poll-get")
-  walk_qq(list_body, "poll-list")
-  if get_code == 404 && list_code == 200 && list_body.fetch("data").empty?
-    gone = true
-    break
-  end
+  remaining = list_code == 200 ? list_body.fetch("data").map { |tester| tester.fetch("id") } : nil
+  puts "POLL #{attempt} HTTP #{list_code} ids=#{remaining.inspect} elapsed=#{attempt * 15}s"
+  list_empty = list_code == 200 && remaining.empty?
 end
-puts "OLD_TESTER_GONE #{gone}"
+puts "EMAIL_FILTER_EMPTY_AFTER_WAIT #{list_empty}"
+raise "sharkchili.su@gmail.com still has a beta tester after 5 minutes" unless list_empty
 
 created = nil
 code = nil
 body = nil
-5.times do |attempt|
-  code, body = create_internal_tester(token, EMAIL, first_name, last_name, [internal.fetch("id")])
-  dump("CREATE attempt #{attempt + 1}", code, body)
+group_sets = [internal_groups.map { |group| group.fetch("id") }, [internal.fetch("id")]]
+group_sets.each_with_index do |group_ids, attempt_index|
+  code, body = create_internal_tester(token, EMAIL, first_name, last_name, group_ids)
+  puts "CREATE_HTTP attempt=#{attempt_index + 1} groups=#{group_ids.inspect} HTTP #{code} id=#{body.dig("data", "id")} #{error_text(body) unless code.between?(200, 299)}"
   if code.between?(200, 299)
     created = body.fetch("data")
     break
   end
-  sleep 5
 end
 raise "Internal reinvite failed HTTP #{code}: #{error_text(body)}" unless created
 
