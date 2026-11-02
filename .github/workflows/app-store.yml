@@ -121,7 +121,7 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.should_release == 'true'
     name: Upload ${{ matrix.platform }}
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 90
     strategy:
       fail-fast: false

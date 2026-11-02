@@ -14,10 +14,10 @@ concurrency:
 jobs:
   screenshots:
     name: Simulator screenshots
-    # Same runner choice as CI: macos-15 has Xcode 26, and macos-26's arm64
-    # pool is what GitHub cancels after 15 minutes with no runner. This
-    # timeout starts when the job starts, not while it is queued.
-    runs-on: macos-15
+    # Intel pool, same Xcode 26 image as CI. workflow_dispatch is declared
+    # above so this can be started by hand after the iOS job is green.
+    # timeout-minutes starts when a runner starts the job, not while queued.
+    runs-on: macos-15-intel
     timeout-minutes: 45
     steps:
       - name: Check out source
