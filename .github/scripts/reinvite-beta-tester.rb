@@ -170,12 +170,10 @@ groups.select { |group| group.dig("attributes", "isInternalGroup") == false && g
   puts "DELETED_EMPTY_EXTERNAL_GROUP id=#{group.fetch("id")} HTTP #{delete_code} #{error_text(delete_body) unless delete_code.between?(200, 299)}"
 end
 
-app_testers_body = expect(
-  *request_json(:get, "/v1/apps/#{app_id}/betaTesters?limit=200", token),
-  "List app beta testers"
-)
-puts "APP_TESTERS count=#{app_testers_body.fetch("data").length}"
-app_testers_body.fetch("data").each do |tester|
+all_code, all_body = request_json(:get, api_path("/v1/betaTesters", { "limit" => "200" }), token)
+all_testers = all_code == 200 ? all_body.fetch("data") : []
+puts "ALL_TESTERS HTTP #{all_code} count=#{all_code == 200 ? all_testers.length : "n/a"} #{error_text(all_body) unless all_code == 200}"
+all_testers.each do |tester|
   attributes = tester.fetch("attributes")
   puts "APP_TESTER id=#{tester.fetch("id")} email=#{attributes["email"]} state=#{attributes["state"]} inviteType=#{attributes["inviteType"]} first=#{attributes["firstName"]} last=#{attributes["lastName"]}"
 end
@@ -198,7 +196,7 @@ testers.each do |tester|
   puts "TESTER id=#{tester.fetch("id")} email=#{attributes["email"]} state=#{attributes["state"]} inviteType=#{attributes["inviteType"]} first=#{attributes["firstName"]} last=#{attributes["lastName"]} groups=#{names.inspect}"
 end
 
-qq_testers = app_testers_body.fetch("data").select { |tester| qq_email?(tester.dig("attributes", "email")) }
+qq_testers = all_testers.select { |tester| qq_email?(tester.dig("attributes", "email")) }
 puts "QQ_TESTERS #{qq_testers.map { |tester| tester.dig("attributes", "email") }.inspect}"
 raise "Refusing to continue: ASC still has a qq.com user and this run will not guess which Apple ID to replace" unless qq_users.empty? && invitations.none? { |invitation| qq_email?(invitation.dig("attributes", "email")) }
 
