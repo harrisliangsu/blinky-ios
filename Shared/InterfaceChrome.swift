@@ -51,6 +51,16 @@ enum InterfacePalette {
     }
 }
 
+/// Screen Time page fill, including the area behind the large title.
+private struct ScreenTimePageFill: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        InterfacePalette.screenTimeCanvas(colorScheme)
+            .ignoresSafeArea()
+    }
+}
+
 /// Saturated field behind Liquid Glass, so the blur has something to blur.
 struct InterfaceGlassBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -140,21 +150,19 @@ struct UsageAccountChrome: ViewModifier {
 
 private struct BlinkyNavigationChrome: ViewModifier {
     var style: InterfaceStyle
-    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         switch style {
         case .classic:
             content
         case .screenTime, .liquidGlass:
-            content.blinkyNavigationBarBackground(style, colorScheme: colorScheme)
+            content.blinkyClearNavigationBar()
         }
     }
 }
 
 private struct SettingsCanvasModifier: ViewModifier {
     @Environment(\.interfaceStyle) private var style
-    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         switch style {
@@ -163,13 +171,13 @@ private struct SettingsCanvasModifier: ViewModifier {
         case .screenTime:
             content
                 .scrollContentBackground(.hidden)
-                .background(InterfacePalette.screenTimeCanvas(colorScheme).ignoresSafeArea())
-                .blinkyNavigationBarBackground(style, colorScheme: colorScheme)
+                .background(ScreenTimePageFill())
+                .blinkyClearNavigationBar()
         case .liquidGlass:
             content
                 .scrollContentBackground(.hidden)
                 .background(InterfaceGlassBackdrop())
-                .blinkyNavigationBarBackground(style, colorScheme: colorScheme)
+                .blinkyClearNavigationBar()
         }
     }
 }
@@ -206,25 +214,35 @@ extension View {
         #endif
     }
 
-    /// Navigation-bar material. `ToolbarPlacement.navigationBar` is iOS-only.
+    /// Keep the large title on the same surface as the page.
+    ///
+    /// A visible toolbar background paints its own band over the large title
+    /// and ends in a hard edge. Hiding it lets the page color run behind
+    /// "Usage" and "Settings" the way the system list does.
     @ViewBuilder
-    func blinkyNavigationBarBackground(_ style: InterfaceStyle, colorScheme: ColorScheme) -> some View {
+    func blinkyClearNavigationBar() -> some View {
         #if os(iOS)
+        self.toolbarBackground(.hidden, for: .navigationBar)
+        #else
+        self
+        #endif
+    }
+
+    /// Page color behind the navigation bar as well as the list.
+    @ViewBuilder
+    func blinkyScreenBackdrop(_ style: InterfaceStyle) -> some View {
         switch style {
         case .classic:
             self
         case .screenTime:
-            self
-                .toolbarBackground(InterfacePalette.screenTimeCanvas(colorScheme), for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+            self.background {
+                ScreenTimePageFill()
+            }
         case .liquidGlass:
-            self
-                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+            self.background {
+                InterfaceGlassBackdrop()
+            }
         }
-        #else
-        self
-        #endif
     }
 
     func blinkyNavigationGlass(_ style: InterfaceStyle) -> some View {

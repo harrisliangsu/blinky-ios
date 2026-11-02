@@ -122,6 +122,7 @@ final class ForecastLogicTests: XCTestCase {
         )
         XCTAssertEqual(tied?.tone, .beforeReset)
         XCTAssertEqual(tied?.text, "At the current pace, about 1d 13h before the next reset.")
+        XCTAssertEqual(tied?.brief, "~1d 13h before reset")
 
         let hint = BurnRate.cardLine(
             for: week, reading: reading, horizon: horizon, softHint: true, beforeReset: false
@@ -260,6 +261,7 @@ final class ForecastLogicTests: XCTestCase {
             for: burst, reading: burstReading!, horizon: 6 * 3600, softHint: true, beforeReset: true
         )
         XCTAssertEqual(chinese?.text, "按当前速度，重置前约 1天8小时 会用尽。")
+        XCTAssertEqual(chinese?.brief, "重置前约 1天8小时")
         XCTAssertEqual(chinese?.note, "开头偏快，预估仅供参考。")
         XCTAssertEqual(
             BurnRate.cardLine(

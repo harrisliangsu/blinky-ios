@@ -120,6 +120,7 @@ private struct UsageTabView: View {
     @State private var showingAddAccount = false
     @State private var relinkingAccount: MonitoredAccount?
     @State private var accountPendingRemoval: MonitoredAccount?
+    @State private var settingsAccount: MonitoredAccount?
 
     var body: some View {
         NavigationStack {
@@ -138,7 +139,7 @@ private struct UsageTabView: View {
                 }
                 #endif
             }
-            .navigationBarTitleDisplayMode(store.accounts.isEmpty ? .inline : .automatic)
+            .navigationBarTitleDisplayMode(store.accounts.isEmpty ? .inline : .large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if !store.accounts.isEmpty {
@@ -177,6 +178,9 @@ private struct UsageTabView: View {
             }
             .refreshable { await store.refreshAll() }
             .blinkyNavigationGlass(interfaceStyle)
+            .navigationDestination(item: $settingsAccount) { account in
+                AccountSettingsView(account: account)
+            }
             .sheet(isPresented: $showingAddAccount) { AddAccountView() }
             .sheet(item: $relinkingAccount) { account in
                 AddAccountView(relinkingAccount: account)
@@ -207,6 +211,7 @@ private struct UsageTabView: View {
                 Button("OK", role: .cancel) {}
             } message: { Text(store.errorMessage ?? "Unknown error") }
         }
+        .blinkyScreenBackdrop(interfaceStyle)
     }
 
     private var emptyState: some View {
@@ -232,7 +237,8 @@ private struct UsageTabView: View {
                                 ProviderSectionHeader(
                                     account: account,
                                     plan: snapshot?.plan ?? account.plan,
-                                    failure: failure
+                                    failure: failure,
+                                    openSettings: { settingsAccount = account }
                                 )
                             }
                             if let failure {
@@ -261,7 +267,8 @@ private struct UsageTabView: View {
                         ProviderSectionHeader(
                             account: account,
                             plan: snapshot?.plan ?? account.plan,
-                            failure: failure
+                            failure: failure,
+                            openSettings: { settingsAccount = account }
                         )
                     }
                 }
@@ -459,6 +466,9 @@ private struct ProviderSectionHeader: View {
     let account: MonitoredAccount
     let plan: String?
     let failure: AccountRefreshFailure?
+    /// Set when this header sits inside a list row. A `NavigationLink` there
+    /// adds a second chevron and leaves the gear beside the name.
+    var openSettings: (() -> Void)? = nil
 
     @Environment(\.interfaceStyle) private var interfaceStyle
 
@@ -489,16 +499,30 @@ private struct ProviderSectionHeader: View {
                     .accessibilityLabel(failure.title)
             }
             Spacer(minLength: 10)
-            NavigationLink {
-                AccountSettingsView(account: account)
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.body)
-                    .accessibilityLabel("\(account.providerDisplayName) account settings")
+            if let openSettings {
+                Button(action: openSettings) {
+                    settingsGear
+                }
+                .buttonStyle(.plain)
+            } else {
+                NavigationLink {
+                    AccountSettingsView(account: account)
+                } label: {
+                    settingsGear
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .textCase(nil)
+    }
+
+    private var settingsGear: some View {
+        Image(systemName: "gearshape.fill")
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .frame(width: 32, height: 32)
+            .contentShape(Rectangle())
+            .accessibilityLabel("\(account.providerDisplayName) account settings")
     }
 }
 
@@ -880,9 +904,9 @@ private struct ScreenTimeHero: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 if window.showsCountdown {
-                    Text(CountdownDisplay.usageString(until: window.resetsAt, from: context.date))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text(CountdownDisplay.resetsInPhrase(until: window.resetsAt, from: context.date))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
                 UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: true)

@@ -26,24 +26,22 @@ final class ScreenshotUITests: XCTestCase {
             shot(language: language, appearance: appearance, screen: "deviceCode", name: "\(name)-04-device-code")
             shot(language: language, appearance: appearance, screen: "settings", name: "\(name)-05-settings")
             shot(language: language, appearance: appearance, screen: "settingsRoot", name: "\(name)-07-settings-root")
-            if language == "en" {
-                for style in ["classic", "screenTime", "liquidGlass"] {
+            for style in ["classic", "screenTime", "liquidGlass"] {
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: style,
+                    screen: "settingsRoot",
+                    name: "\(name)-settings-\(style)"
+                )
+                if appearance == "light" {
                     shot(
                         language: language,
                         appearance: appearance,
                         interfaceStyle: style,
-                        screen: "settingsRoot",
-                        name: "\(name)-settings-\(style)"
+                        screen: "settings",
+                        name: "\(name)-appearance-\(style)"
                     )
-                    if appearance == "light" {
-                        shot(
-                            language: language,
-                            appearance: appearance,
-                            interfaceStyle: style,
-                            screen: "settings",
-                            name: "\(name)-appearance-\(style)"
-                        )
-                    }
                 }
             }
             shot(language: language, appearance: appearance, screen: "about", name: "\(name)-08-about")

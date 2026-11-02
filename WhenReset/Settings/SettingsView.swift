@@ -46,7 +46,9 @@ struct SettingsView: View {
             }
             .blinkySettingsCanvas()
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
         }
+        .blinkyScreenBackdrop(interfaceStyle)
     }
 
     private func moduleLink<Destination: View>(

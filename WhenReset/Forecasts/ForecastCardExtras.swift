@@ -96,7 +96,10 @@ struct ForecastCardExtras: View {
     }
 
     private func summaryLine(urgent: [ForecastCardModel.Row], lines: CodexResetCardLines?) -> String {
-        if let text = urgent.first?.line.text, !text.isEmpty { return text }
+        if let line = urgent.first?.line {
+            let brief = line.brief.isEmpty ? line.text : line.brief
+            if !brief.isEmpty { return brief }
+        }
         if let lines, !lines.prediction.isPlaceholder {
             return String.localized("Predicted reset")
         }
