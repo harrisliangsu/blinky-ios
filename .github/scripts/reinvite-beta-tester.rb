@@ -183,7 +183,49 @@ def ensure_export_compliance(token, build)
   code.between?(200, 299) ? body.fetch("data") : build
 end
 
+def ensure_beta_description(token, app_id)
+  code, body = request_json(:get, "/v1/apps/#{app_id}/betaAppLocalizations?limit=20", token)
+  puts "BETA_APP_LOCALIZATIONS HTTP #{code} #{error_text(body) unless code == 200}"
+  return unless code == 200
+
+  localizations = body.fetch("data")
+  localization = localizations.find { |row| row.dig("attributes", "locale") == "en-US" } || localizations.first
+  description = "Blinky shows provider usage limits on this iPhone. The first screen is an empty usage list until an account is connected."
+  if localization.nil?
+    create_code, create_body = request_json(
+      :post,
+      "/v1/betaAppLocalizations",
+      token,
+      {
+        data: {
+          type: "betaAppLocalizations",
+          attributes: { description: description, feedbackEmail: EMAIL, locale: "en-US" },
+          relationships: { app: { data: { type: "apps", id: app_id } } }
+        }
+      }
+    )
+    puts "BETA_APP_DESCRIPTION_CREATE HTTP #{create_code} #{error_text(create_body) unless create_code.between?(200, 299)}"
+    return
+  end
+
+  attributes = localization.fetch("attributes")
+  puts "BETA_APP_DESCRIPTION locale=#{attributes["locale"]} present=#{!attributes["description"].to_s.empty?} feedback_present=#{!attributes["feedbackEmail"].to_s.empty?}"
+  patch = {}
+  patch[:description] = description if attributes["description"].to_s.empty?
+  patch[:feedbackEmail] = EMAIL if attributes["feedbackEmail"].to_s.empty?
+  return if patch.empty?
+
+  patch_code, patch_body = request_json(
+    :patch,
+    "/v1/betaAppLocalizations/#{localization.fetch("id")}",
+    token,
+    { data: { type: "betaAppLocalizations", id: localization.fetch("id"), attributes: patch } }
+  )
+  puts "BETA_APP_DESCRIPTION_PATCH HTTP #{patch_code} #{error_text(patch_body) unless patch_code.between?(200, 299)}"
+end
+
 def submit_beta_review(token, app_id, build)
+  ensure_beta_description(token, app_id)
   review_code, review_body = request_json(:get, "/v1/builds/#{build.fetch("id")}/betaAppReviewSubmission", token)
   existing = review_code == 200 ? review_body["data"] : nil
   state = existing&.dig("attributes", "betaReviewState")
@@ -248,6 +290,11 @@ def invite_external(token, app_id, groups, first_name, last_name)
   end
   puts "EXTERNAL_TESTER_ID #{tester_id}"
   puts "EXTERNAL_TESTER_ID_DIFFERS_FROM_INTERNAL #{tester_id != OLD_TESTER_ID}"
+  add_code, add_body = add_tester_to_group(token, external.fetch("id"), tester_id)
+  puts "EXTERNAL_GROUP_ADD HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299) || add_code == 409}"
+  confirm_code, confirm_body = request_json(:get, "/v1/betaGroups/#{external.fetch("id")}/betaTesters?limit=20", token)
+  confirm = confirm_code == 200 ? confirm_body.fetch("data").map { |tester| "#{tester.fetch("id")}:#{tester.dig("attributes", "email")}:#{tester.dig("attributes", "state")}" } : []
+  puts "EXTERNAL_MEMBERS HTTP #{confirm_code} #{confirm.inspect}"
 
   build = find_ios_build(token, app_id)
   raise "Build #{MARKETING_VERSION} (#{BUILD_NUMBER}) was not found" unless build
