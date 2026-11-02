@@ -78,6 +78,7 @@ decoration.
   number. The number is time until empty, not time past the reset.
 - **Settings.** Stock labels and grouped rows. Style is the page surface,
   not a custom icon.
-- **Token activity.** A year chart in one accent, then each model as a name
-  with cache, input, output, and speed on the trailing edge. No transcripts
-  means an empty explanation, not a zero chart.
+- **Token activity.** The year chart fills the card. Performance is a
+  separate span (7 days, 30 days, or the year) whose cache, input, and
+  output add up to that span's total. No transcripts means an explanation,
+  not a zero chart.

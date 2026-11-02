@@ -43,28 +43,70 @@ enum ScreenshotLaunch {
         }
     }
 
-    /// A year of weekday-heavy counts and a cache / input / output split.
+    static var tokenChart: TokenActivityChart {
+        switch screen {
+        case "tokenActivityWeekly": .weekly
+        case "tokenActivityCumulative": .cumulative
+        default: .daily
+        }
+    }
+
+    static var seedsTokenActivity: Bool {
+        switch screen {
+        case "tokenActivity", "tokenActivityWeekly", "tokenActivityCumulative": true
+        default: false
+        }
+    }
+
+    /// A year of days. Each day's cache, input, and output sum to that day's total.
     /// Only the screenshot launch uses this. A phone with no transcripts stays empty.
-    static func tokenActivitySample(now: Date = .now, calendar: Calendar = .current) -> (days: [Date: Int], rows: [TokenPerformanceRow]) {
+    static func tokenActivityRecords(now: Date = .now, calendar: Calendar = .current) -> [TokenDayUsage] {
         let today = calendar.startOfDay(for: now)
-        var days: [Date: Int] = [:]
+        var records: [TokenDayUsage] = []
         for offset in 0..<360 {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
             let weekday = calendar.component(.weekday, from: date)
             let weekend = weekday == 1 || weekday == 7
             if offset % 13 == 0 { continue }
             let wave = (offset * 17) % 40
-            var tokens = (weekend ? 12_000 : 48_000) + wave * 2_200
-            if offset % 23 == 0 { tokens += 220_000 }
-            days[date] = tokens
+            var total = (weekend ? 12_000 : 48_000) + wave * 2_200
+            if offset % 23 == 0 { total += 220_000 }
+            let shares = split(total, weights: [50, 32, 18])
+            records.append(TokenDayUsage(date: date, models: [
+                model("gpt-5.4", total: shares[0], cache: 55, input: 32, output: 13, speed: 51.4),
+                model("claude-sonnet", total: shares[1], cache: 45, input: 38, output: 17, speed: 38.2),
+                model("grok-4", total: shares[2], cache: nil, input: 75, output: 25, speed: 62.0),
+            ]))
         }
-        let rows = [
-            TokenPerformanceRow(name: "Overall", cache: 2_460_000, input: 1_640_000, output: 420_000, tokensPerSecond: 44.6),
-            TokenPerformanceRow(name: "gpt-5.4", cache: 1_380_000, input: 820_000, output: 210_000, tokensPerSecond: 51.4),
-            TokenPerformanceRow(name: "claude-sonnet", cache: 680_000, input: 540_000, output: 140_000, tokensPerSecond: 38.2),
-            TokenPerformanceRow(name: "grok-4", cache: nil, input: 280_000, output: 70_000, tokensPerSecond: 62.0),
-        ]
-        return (days, rows)
+        return records
+    }
+
+    private static func model(
+        _ name: String,
+        total: Int,
+        cache: Int?,
+        input: Int,
+        output: Int,
+        speed: Double
+    ) -> TokenModelUsage {
+        if let cache {
+            let parts = split(total, weights: [cache, input, output])
+            return TokenModelUsage(name: name, cache: parts[0], input: parts[1], output: parts[2], tokensPerSecond: speed)
+        }
+        let parts = split(total, weights: [input, output])
+        return TokenModelUsage(name: name, cache: nil, input: parts[0], output: parts[1], tokensPerSecond: speed)
+    }
+
+    /// Integer parts that sum to `total`. The last weight takes the remainder.
+    private static func split(_ total: Int, weights: [Int]) -> [Int] {
+        let sum = max(weights.reduce(0, +), 1)
+        var assigned = 0
+        return weights.enumerated().map { index, weight in
+            if index == weights.count - 1 { return total - assigned }
+            let part = total * weight / sum
+            assigned += part
+            return part
+        }
     }
 
     private static func argument(after flag: String) -> String? {

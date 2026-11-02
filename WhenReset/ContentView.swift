@@ -25,7 +25,8 @@ struct ContentView: View {
         .onAppear {
             #if DEBUG
             if ScreenshotLaunch.isActive,
-               ["settings", "settingsRoot", "forecasts", "about", "notifications", "tokenActivity"]
+               ["settings", "settingsRoot", "forecasts", "about", "notifications",
+                "tokenActivity", "tokenActivityWeekly", "tokenActivityCumulative", "tokenActivityEmpty"]
                 .contains(ScreenshotLaunch.screen) {
                 selectedTab = .settings
             }

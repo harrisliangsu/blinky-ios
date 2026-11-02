@@ -56,6 +56,29 @@ final class ScreenshotUITests: XCTestCase {
                     name: "\(name)-token-\(style)"
                 )
             }
+            if appearance == "light" {
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: "liquidGlass",
+                    screen: "tokenActivityWeekly",
+                    name: "\(name)-token-weekly"
+                )
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: "liquidGlass",
+                    screen: "tokenActivityCumulative",
+                    name: "\(name)-token-cumulative"
+                )
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: "liquidGlass",
+                    screen: "tokenActivityEmpty",
+                    name: "\(name)-token-empty"
+                )
+            }
         }
     }
 
@@ -169,11 +192,22 @@ final class ScreenshotUITests: XCTestCase {
                     || chineseUnexpected.exists
             )
         case "tokenActivity":
-            openSettingsModule(app, english: "Token activity", chinese: "Token 活动")
+            openTokenActivity(app)
             XCTAssertTrue(app.descendants(matching: .any)["token-activity-daily"].waitForExistence(timeout: 12))
             XCTAssertTrue(app.descendants(matching: .any)["token-performance"].waitForExistence(timeout: 8))
-            let model = app.staticTexts["gpt-5.4"]
-            XCTAssertTrue(model.waitForExistence(timeout: 4))
+            XCTAssertTrue(app.staticTexts["gpt-5.4"].waitForExistence(timeout: 4))
+        case "tokenActivityWeekly":
+            openTokenActivity(app)
+            XCTAssertTrue(app.descendants(matching: .any)["token-activity-weekly"].waitForExistence(timeout: 12))
+        case "tokenActivityCumulative":
+            openTokenActivity(app)
+            XCTAssertTrue(app.descendants(matching: .any)["token-activity-cumulative"].waitForExistence(timeout: 12))
+        case "tokenActivityEmpty":
+            openTokenActivity(app)
+            XCTAssertTrue(app.descendants(matching: .any)["token-activity-empty"].waitForExistence(timeout: 12))
+            let empty = app.staticTexts["No local transcripts"]
+            let chineseEmpty = app.staticTexts["没有本地记录"]
+            XCTAssertTrue(empty.exists || chineseEmpty.exists)
         case "reorder":
             let done = app.buttons["Done"]
             let chineseDone = app.buttons["完成"]
@@ -202,6 +236,10 @@ final class ScreenshotUITests: XCTestCase {
         }
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         row.tap()
+    }
+
+    private func openTokenActivity(_ app: XCUIApplication) {
+        openSettingsModule(app, english: "Token activity", chinese: "Token 活动")
     }
 
     private func openSettingsModule(_ app: XCUIApplication, english: String, chinese: String) {

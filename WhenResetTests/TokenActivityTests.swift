@@ -67,16 +67,33 @@ final class TokenActivityTests: XCTestCase {
         XCTAssertEqual(table?.rows.map(\.name), ["gpt", "other"])
     }
 
-    func testScreenshotSampleCoversAYearAndTheTokenSplit() {
-        let sample = ScreenshotLaunch.tokenActivitySample(now: today, calendar: calendar)
-        let activity = TokenActivity.of(days: sample.days, now: today, calendar: calendar)
-        XCTAssertGreaterThan(activity.total, 1_000_000)
-        XCTAssertGreaterThan(activity.activeDays, 200)
-        XCTAssertLessThanOrEqual(activity.columnCount, 53)
-        let table = TokenPerformanceTable.make(sample.rows)
-        XCTAssertEqual(table?.columns, [.cache, .input, .output, .speed])
-        XCTAssertEqual(table?.rows.map(\.name), ["Overall", "gpt-5.4", "claude-sonnet", "grok-4"])
-        XCTAssertNil(sample.rows.last?.cache)
-        XCTAssertNotNil(sample.rows.last?.input)
+    func testScreenshotSamplePartsAddUpToTheDayAndTheSpan() {
+        let records = ScreenshotLaunch.tokenActivityRecords(now: today, calendar: calendar)
+        XCTAssertFalse(records.isEmpty)
+        for record in records {
+            let parts = record.models.reduce(0) { $0 + $1.total }
+            XCTAssertEqual(parts, record.total)
+            XCTAssertNil(record.models.last?.cache)
+        }
+        let days = Dictionary(records.map { ($0.date, $0.total) }, uniquingKeysWith: +)
+        let activity = TokenActivity.of(days: days, now: today, calendar: calendar)
+        let year = TokenSpanMath.summary(records: records, span: .all, now: today, calendar: calendar)
+        XCTAssertEqual(year.total, activity.total)
+        XCTAssertGreaterThan(year.total, 1_000_000)
+        let month = TokenSpanMath.summary(records: records, span: .thirtyDays, now: today, calendar: calendar)
+        let recent = records.filter { record in
+            let start = calendar.date(byAdding: .day, value: -29, to: today)!
+            return record.date >= start && record.date <= today
+        }
+        XCTAssertEqual(month.total, recent.reduce(0) { $0 + $1.total })
+        XCTAssertLessThan(month.total, year.total)
+        let cache = month.models.reduce(0) { $0 + ($1.cache ?? 0) }
+        let input = month.models.reduce(0) { $0 + $1.input }
+        let output = month.models.reduce(0) { $0 + $1.output }
+        XCTAssertEqual(cache + input + output, month.total)
+        XCTAssertEqual(month.models.map(\.name), ["gpt-5.4", "claude-sonnet", "grok-4"])
+        XCTAssertNil(month.models.last?.cache)
+        XCTAssertNotNil(month.cacheHit)
+        XCTAssertNotNil(month.averageSpeed)
     }
 }
