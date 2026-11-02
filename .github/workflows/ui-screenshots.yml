@@ -17,8 +17,12 @@ jobs:
     # Intel pool, same Xcode 26 image as CI. workflow_dispatch is declared
     # above so this can be started by hand after the iOS job is green.
     # timeout-minutes starts when a runner starts the job, not while queued.
+    # One Intel pass of the full en/zh × light/dark × 3 styles matrix, plus
+    # export, ran into the old 45 minute limit and the job was cancelled
+    # after the artifact uploaded. 90 covers that pass and a simulator retry.
+    # A second parallel macOS job would queue behind the same scarce runner.
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Check out source
         uses: actions/checkout@v4

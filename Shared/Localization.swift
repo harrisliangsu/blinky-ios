@@ -78,6 +78,25 @@ extension Text {
     }
 }
 
+enum UpdatedCaption {
+    /// One caption: "Updated 12s ago" / "12秒前更新".
+    static func phrase(since date: Date, now: Date = .now) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date).rounded(.down)))
+        let locale = AppLanguage.current.locale
+        let body: String
+        if seconds < 60 {
+            body = String(format: String.localized("%llds ago"), locale: locale, Int64(seconds))
+        } else if seconds < 3_600 {
+            body = String(format: String.localized("%lldm ago"), locale: locale, Int64(seconds / 60))
+        } else if seconds < 86_400 {
+            body = String(format: String.localized("%lldh ago"), locale: locale, Int64(seconds / 3_600))
+        } else {
+            body = String(format: String.localized("%lldd ago"), locale: locale, Int64(seconds / 86_400))
+        }
+        return String(format: String.localized("Updated %@"), locale: locale, body)
+    }
+}
+
 enum UsageText {
     static func remainingPercent(_ value: Double) -> String {
         let percent = Int(value.rounded())

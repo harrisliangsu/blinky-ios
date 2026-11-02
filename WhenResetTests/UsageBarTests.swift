@@ -51,6 +51,13 @@ final class UsageBarTests: XCTestCase {
         XCTAssertEqual(glass.cap, .round)
         XCTAssertGreaterThan(screenTime.height, classic.height)
         XCTAssertGreaterThan(screenTime.height, glass.height)
+        let screenTimeCard = InterfaceStyle.screenTime.continuousMeter(prominent: false)
+        XCTAssertEqual(screenTimeCard.cap, .square)
+        XCTAssertGreaterThan(
+            screenTimeCard.height,
+            InterfaceStyle.classic.continuousMeter(prominent: false).height
+        )
+        XCTAssertLessThan(screenTimeCard.height, screenTime.height)
         XCTAssertGreaterThan(glass.trackOpacity, classic.trackOpacity)
         XCTAssertNotEqual(classic, screenTime)
         XCTAssertNotEqual(screenTime, glass)

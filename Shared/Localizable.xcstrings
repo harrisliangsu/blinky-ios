@@ -28,7 +28,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld天"
+            "value": "%lld 天"
           }
         }
       }
@@ -44,7 +44,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld小时"
+            "value": "%lld 小时"
           }
         }
       }
@@ -60,7 +60,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld小时%02lld分"
+            "value": "%lld 小时 %02lld 分"
           }
         }
       }
@@ -76,7 +76,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld天%lld小时"
+            "value": "%lld 天 %lld 小时"
           }
         }
       }
@@ -92,7 +92,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld分钟"
+            "value": "%lld 分钟"
           }
         }
       }
@@ -108,7 +108,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld%% 剩余"
+            "value": "剩余 %lld%%"
           }
         }
       }
@@ -657,18 +657,18 @@
         }
       }
     },
-    "Classic is a system list. Screen Time uses a large figure and category rows. Liquid Glass floats each account on glass.": {
+    "Classic is a plain grouped list. Screen Time uses a rounded percent and block bars. Liquid Glass is one glass card.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Classic is a system list. Screen Time uses a large figure and category rows. Liquid Glass floats each account on glass."
+            "value": "Classic is a plain grouped list. Screen Time uses a rounded percent and block bars. Liquid Glass is one glass card."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "经典是系统列表。屏幕使用时间用大号数字和分类行。液态玻璃让每个账号浮在玻璃上。"
+            "value": "经典是普通分组列表。屏幕使用时间用圆体百分比和方块进度条。液态玻璃是一张玻璃卡片。"
           }
         }
       }
@@ -4577,6 +4577,86 @@
         }
       }
     },
+    "Updated %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@更新"
+          }
+        }
+      }
+    },
+    "%llds ago": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%llds ago"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld秒前"
+          }
+        }
+      }
+    },
+    "%lldm ago": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldm ago"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分钟前"
+          }
+        }
+      }
+    },
+    "%lldh ago": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldh ago"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld小时前"
+          }
+        }
+      }
+    },
+    "%lldd ago": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldd ago"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld天前"
+          }
+        }
+      }
+    },
     "Updates": {
       "localizations": {
         "en": {
@@ -6876,7 +6956,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "约 %@天"
+            "value": "约 %@ 天"
           }
         }
       }
@@ -6892,7 +6972,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "约 %@天%@小时"
+            "value": "约 %@ 天 %@ 小时"
           }
         }
       }
@@ -6908,7 +6988,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@天"
+            "value": "%@ 天"
           }
         }
       }
@@ -6924,7 +7004,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@天%@小时"
+            "value": "%@ 天 %@ 小时"
           }
         }
       }
@@ -7009,6 +7089,54 @@
         }
       }
     },
+    "Runs out in ~%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runs out in ~%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "约 %@后用尽"
+          }
+        }
+      }
+    },
+    "At the current pace, runs out in about %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At the current pace, runs out in about %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按当前速度，约 %@后用尽。"
+          }
+        }
+      }
+    },
+    "At this pace: lasts until reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At this pace: lasts until reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按当前速度：可撑到重置"
+          }
+        }
+      }
+    },
     "~%@ before reset": {
       "localizations": {
         "en": {
@@ -7036,7 +7164,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@小时"
+            "value": "%@ 小时"
           }
         }
       }
@@ -7052,7 +7180,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@分钟"
+            "value": "%@ 分钟"
           }
         }
       }
@@ -7062,13 +7190,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "<15m"
+            "value": "15m"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "15分钟内"
+            "value": "15 分钟"
           }
         }
       }
@@ -7084,7 +7212,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "1小时"
+            "value": "1 小时"
           }
         }
       }

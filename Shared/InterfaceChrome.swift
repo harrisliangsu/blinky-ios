@@ -21,13 +21,20 @@ enum UsageMeterCap: Equatable, Sendable {
     case square
 }
 
+enum InterfaceMetrics {
+    /// Space between account cards. One value for every interface style.
+    static let cardSpacing: CGFloat = 14
+}
+
 extension InterfaceStyle {
     func continuousMeter(prominent: Bool) -> UsageMeterMetrics {
         switch self {
         case .classic:
             return UsageMeterMetrics(height: 6, cap: .round, trackOpacity: 0.14)
         case .screenTime:
-            return UsageMeterMetrics(height: prominent ? 14 : 9, cap: .square, trackOpacity: 0.10)
+            // A short-cornered block, tall enough that it does not read as a pill.
+            // Cards pass `prominent`; widgets stay a step shorter.
+            return UsageMeterMetrics(height: prominent ? 14 : 10, cap: .square, trackOpacity: 0.16)
         case .liquidGlass:
             return UsageMeterMetrics(height: prominent ? 8 : 6, cap: .round, trackOpacity: 0.28)
         }
@@ -114,13 +121,25 @@ struct UsageListSurface: ViewModifier {
         switch style {
         case .classic:
             content
+                .listStyle(.insetGrouped)
+                .blinkyCardSpacing()
+                .blinkyBottomScrollMargin()
         case .screenTime:
             content
-                .blinkyScreenTimeListSpacing(8)
+                .listStyle(.insetGrouped)
+                .blinkyCardSpacing()
+                .blinkyBottomScrollMargin()
                 .scrollContentBackground(.hidden)
                 .background(InterfacePalette.screenTimeCanvas(colorScheme).ignoresSafeArea())
         case .liquidGlass:
+            // Plain list: an inset-grouped section is its own card, and a
+            // glass plate inside it reads as a card inside a card.
             content
+                .listStyle(.plain)
+                .listSectionSeparator(.hidden)
+                .blinkyPlainListHeaders()
+                .blinkyCardSpacing()
+                .blinkyBottomScrollMargin()
                 .scrollContentBackground(.hidden)
                 .background(InterfaceGlassBackdrop())
         }
@@ -136,14 +155,15 @@ struct UsageAccountChrome: ViewModifier {
             content
         case .screenTime:
             content
-                .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                .listRowSeparator(.hidden)
                 .listRowBackground(InterfacePalette.pageBackground)
         case .liquidGlass:
             content
                 .blinkyGlassPlate()
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         }
     }
 }
@@ -167,17 +187,19 @@ private struct SettingsCanvasModifier: ViewModifier {
     func body(content: Content) -> some View {
         switch style {
         case .classic:
-            content
+            content.blinkyBottomScrollMargin()
         case .screenTime:
             content
                 .scrollContentBackground(.hidden)
                 .background(ScreenTimePageFill())
                 .blinkyClearNavigationBar()
+                .blinkyBottomScrollMargin()
         case .liquidGlass:
             content
                 .scrollContentBackground(.hidden)
                 .background(InterfaceGlassBackdrop())
                 .blinkyClearNavigationBar()
+                .blinkyBottomScrollMargin()
         }
     }
 }
@@ -204,11 +226,31 @@ private struct GlassSectionFill: View {
 }
 
 extension View {
-    /// Extra air between account cards. The spacing API is iOS-only.
+    /// Plain lists keep a header slot even when the section has no header.
     @ViewBuilder
-    func blinkyScreenTimeListSpacing(_ spacing: CGFloat = 8) -> some View {
+    func blinkyPlainListHeaders() -> some View {
         #if os(iOS)
-        self.listSectionSpacing(spacing)
+        self.environment(\.defaultMinListHeaderHeight, 0)
+        #else
+        self
+        #endif
+    }
+
+    /// The same gap between account cards in every style. iOS-only API.
+    @ViewBuilder
+    func blinkyCardSpacing() -> some View {
+        #if os(iOS)
+        self.listSectionSpacing(InterfaceMetrics.cardSpacing)
+        #else
+        self
+        #endif
+    }
+
+    /// Extra scroll room so the last card can move clear of the tab bar.
+    @ViewBuilder
+    func blinkyBottomScrollMargin() -> some View {
+        #if os(iOS)
+        self.contentMargins(.bottom, 28, for: .scrollContent)
         #else
         self
         #endif
@@ -257,19 +299,19 @@ extension View {
         modifier(SettingsSectionModifier())
     }
 
-    /// Floating plate. iOS 26 uses system glass; earlier systems use a material,
-    /// a light rim, and a shadow so the plate still separates from the page.
+    /// One glass surface: fill, a single hairline, and a soft shadow.
+    /// No second stroke and no padding outside the shape, so the list does
+    /// not draw another plate around it.
     @ViewBuilder
     func blinkyGlassPlate() -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         #if os(iOS)
         if #available(iOS 26, *) {
             self
-                .padding(14)
+                .padding(16)
                 .glassEffect(.regular, in: shape)
-                .overlay { shape.strokeBorder(Color.white.opacity(0.45), lineWidth: 1) }
-                .shadow(color: Color.black.opacity(0.18), radius: 18, y: 10)
-                .padding(.vertical, 4)
+                .overlay { shape.strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5) }
+                .shadow(color: Color.black.opacity(0.12), radius: 8, y: 3)
         } else {
             blinkyMaterialPlate(shape)
         }
@@ -279,11 +321,10 @@ extension View {
     }
 
     func blinkyMaterialPlate(_ shape: RoundedRectangle) -> some View {
-        padding(14)
+        padding(16)
             .background(.ultraThinMaterial, in: shape)
-            .overlay { shape.strokeBorder(Color.white.opacity(0.55), lineWidth: 1) }
-            .shadow(color: Color.black.opacity(0.16), radius: 16, y: 8)
-            .padding(.vertical, 4)
+            .overlay { shape.strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: Color.black.opacity(0.12), radius: 8, y: 3)
     }
 
     /// Frosted inset for secondary card details.

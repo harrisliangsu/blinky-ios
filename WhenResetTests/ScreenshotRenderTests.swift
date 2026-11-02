@@ -32,11 +32,11 @@ final class ScreenshotRenderTests: XCTestCase {
             let now = Date(timeIntervalSince1970: 1_000)
             XCTAssertEqual(
                 CountdownDisplay.compactString(until: now.addingTimeInterval(3 * 3_600), from: now),
-                "3小时"
+                "3 小时"
             )
             XCTAssertEqual(
                 CountdownDisplay.compactString(until: now.addingTimeInterval(5 * 86_400), from: now),
-                "5天"
+                "5 天"
             )
         }
         let seeded = ScreenshotFixture.seed()

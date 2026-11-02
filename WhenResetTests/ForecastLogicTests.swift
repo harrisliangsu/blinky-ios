@@ -121,8 +121,8 @@ final class ForecastLogicTests: XCTestCase {
             for: week, reading: reading, horizon: horizon, softHint: true, beforeReset: true
         )
         XCTAssertEqual(tied?.tone, .beforeReset)
-        XCTAssertEqual(tied?.text, "At the current pace, about 1d 13h before the next reset.")
-        XCTAssertEqual(tied?.brief, "~1d 13h before reset")
+        XCTAssertEqual(tied?.text, "At the current pace, runs out in about 1d 13h.")
+        XCTAssertEqual(tied?.brief, "Runs out in ~1d 13h")
 
         let hint = BurnRate.cardLine(
             for: week, reading: reading, horizon: horizon, softHint: true, beforeReset: false
@@ -149,6 +149,13 @@ final class ForecastLogicTests: XCTestCase {
             )?.tone,
             .lasts
         )
+        XCTAssertEqual(
+            BurnRate.cardLine(
+                for: steady, reading: BurnRate.reading(for: steady, now: now)!,
+                horizon: horizon, softHint: true, beforeReset: true
+            )?.brief,
+            "At this pace: lasts until reset"
+        )
 
         let fiveHour = window(
             "window", kind: .fiveHour, scope: "GPT", used: 0.7, seconds: 18_000,
@@ -161,12 +168,12 @@ final class ForecastLogicTests: XCTestCase {
         XCTAssertTrue(named?.text.hasPrefix("5-hour · GPT · ") == true)
 
         useChinese()
-        XCTAssertEqual(BurnRate.approximate(37 * 3600), "约 1天13小时")
-        XCTAssertEqual(BurnRate.span(37 * 3600), "1天13小时")
+        XCTAssertEqual(BurnRate.approximate(37 * 3600), "约 1 天 13 小时")
+        XCTAssertEqual(BurnRate.span(37 * 3600), "1 天 13 小时")
         let chinese = BurnRate.cardLine(
             for: week, reading: reading, horizon: 48 * 3600, softHint: true, beforeReset: true
         )
-        XCTAssertEqual(chinese?.text, "每周 · 约 1天13小时后用尽")
+        XCTAssertEqual(chinese?.text, "每周 · 约 1 天 13 小时后用尽")
         XCTAssertNil(chinese?.note)
     }
 
@@ -189,7 +196,8 @@ final class ForecastLogicTests: XCTestCase {
             for: burst, reading: burstReading!, horizon: 6 * 3600, softHint: true, beforeReset: true
         )
         XCTAssertEqual(burstLine?.tone, .beforeReset)
-        XCTAssertEqual(burstLine?.text, "At the current pace, about 1d 8h before the next reset.")
+        XCTAssertEqual(burstLine?.text, "At the current pace, runs out in about 1d 8h.")
+        XCTAssertEqual(burstLine?.brief, "Runs out in ~1d 8h")
         XCTAssertEqual(burstLine?.note, "A fast start. The estimate is only a guide.")
         XCTAssertTrue(burstLine?.spoken.hasSuffix("A fast start. The estimate is only a guide.") == true)
 
@@ -260,8 +268,8 @@ final class ForecastLogicTests: XCTestCase {
         let chinese = BurnRate.cardLine(
             for: burst, reading: burstReading!, horizon: 6 * 3600, softHint: true, beforeReset: true
         )
-        XCTAssertEqual(chinese?.text, "按当前速度，重置前约 1天8小时 会用尽。")
-        XCTAssertEqual(chinese?.brief, "重置前约 1天8小时")
+        XCTAssertEqual(chinese?.text, "按当前速度，约 1 天 8 小时后用尽。")
+        XCTAssertEqual(chinese?.brief, "约 1 天 8 小时后用尽")
         XCTAssertEqual(chinese?.note, "开头偏快，预估仅供参考。")
         XCTAssertEqual(
             BurnRate.cardLine(
@@ -287,6 +295,7 @@ final class ForecastLogicTests: XCTestCase {
         )
         XCTAssertEqual(line?.tone, .lasts)
         XCTAssertEqual(line?.text, "Expected to last the window")
+        XCTAssertEqual(line?.brief, "At this pace: lasts until reset")
         XCTAssertNil(BurnRate.forecastLine(
             for: five, among: [five, week], showsForecast: true,
             horizon: 6 * 3600, softHint: true, beforeReset: true, now: now
@@ -326,6 +335,17 @@ final class ForecastLogicTests: XCTestCase {
 
         useChinese()
         XCTAssertEqual(ForecastCopy.text("Expected to last the window"), "预计可维持到本轮重置")
+        XCTAssertEqual(ForecastCopy.text("At this pace: lasts until reset"), "按当前速度：可撑到重置")
+        let updated = Date(timeIntervalSince1970: 1_000_000)
+        XCTAssertEqual(
+            UpdatedCaption.phrase(since: updated.addingTimeInterval(-12), now: updated),
+            "12秒前更新"
+        )
+        useEnglish()
+        XCTAssertEqual(
+            UpdatedCaption.phrase(since: updated.addingTimeInterval(-12), now: updated),
+            "Updated 12s ago"
+        )
     }
 
     func testFastStatedWindowShowsExhaustionBesideAQuietWeek() {

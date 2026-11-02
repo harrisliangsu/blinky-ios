@@ -213,10 +213,13 @@ enum BurnRate {
             )
         }
         if reading.exhaustsBeforeReset, beforeReset, let seconds = reading.timeToExhaustion {
+            // `seconds` is time from now until the quota hits zero, and only
+            // when that moment is still before the reset. It is not the gap
+            // between empty and the reset, and it is not time past the reset.
             let when = span(seconds)
             return stated(
-                ForecastCopy.format("At the current pace, about %@ before the next reset.", when),
-                brief: ForecastCopy.format("~%@ before reset", compactSpan(seconds)),
+                ForecastCopy.format("At the current pace, runs out in about %@.", when),
+                brief: ForecastCopy.format("Runs out in ~%@", compactSpan(seconds)),
                 tone: .beforeReset,
                 reading: reading
             )
@@ -230,7 +233,12 @@ enum BurnRate {
             )
         }
         if !reading.exhaustsBeforeReset {
-            return stated(ForecastCopy.text("Expected to last the window"), tone: .lasts, reading: reading)
+            return stated(
+                ForecastCopy.text("Expected to last the window"),
+                brief: ForecastCopy.text("At this pace: lasts until reset"),
+                tone: .lasts,
+                reading: reading
+            )
         }
         return nil
     }

@@ -57,7 +57,7 @@ struct AppearanceSettingsView: View {
                 }
                 .accessibilityIdentifier("interface-style")
             } footer: {
-                Text("Classic is a system list. Screen Time uses a large figure and category rows. Liquid Glass floats each account on glass.")
+                Text("Classic is a plain grouped list. Screen Time uses a rounded percent and block bars. Liquid Glass is one glass card.")
             }
             .blinkySettingsSection()
             Section {

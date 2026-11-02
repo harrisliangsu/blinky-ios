@@ -224,7 +224,7 @@ struct UsageBar: View {
                         Capsule().fill(accent).frame(width: width)
                     }
                 case .square:
-                    let shape = RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    let shape = RoundedRectangle(cornerRadius: 2, style: .continuous)
                     ZStack(alignment: .leading) {
                         shape.fill(track)
                         shape.fill(accent).frame(width: width)
@@ -234,15 +234,25 @@ struct UsageBar: View {
                 let ticks = Self.ticks(width: proxy.size.width, fraction: clamped, scale: scale)
                 HStack(spacing: Self.tickGap * scale) {
                     ForEach(0..<ticks.count, id: \.self) { index in
-                        Capsule()
-                            .fill(index < ticks.lit ? accent : track)
-                            .frame(width: Self.tickWidth * scale)
+                        tick(index < ticks.lit ? accent : track, width: Self.tickWidth * scale)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
         }
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func tick(_ color: Color, width: CGFloat) -> some View {
+        switch cap {
+        case .round:
+            Capsule().fill(color).frame(width: width)
+        case .square:
+            RoundedRectangle(cornerRadius: 1, style: .continuous)
+                .fill(color)
+                .frame(width: width)
+        }
     }
 
     nonisolated static func ticks(width: CGFloat, fraction: Double, scale: CGFloat = 1) -> (count: Int, lit: Int) {
@@ -273,7 +283,7 @@ struct UsageMeter: View {
             accent: UsageMeterTint.color(remainingFraction: remainingFraction, colorScheme: colorScheme),
             track: Color.primary.opacity(continuous ? metrics.trackOpacity : 0.16),
             style: style,
-            cap: continuous ? metrics.cap : .round
+            cap: metrics.cap
         )
         .frame(maxWidth: .infinity)
         .frame(height: continuous ? metrics.height : style.barHeight)

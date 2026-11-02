@@ -278,7 +278,6 @@ private struct UsageTabView: View {
             }
         }
         .accessibilityIdentifier("usage-style-\(interfaceStyle.rawValue)")
-        .listStyle(.insetGrouped)
         .modifier(UsageListSurface(style: interfaceStyle))
         .environment(\.editMode, .constant(editingAccountOrder ? .active : .inactive))
     }
@@ -456,18 +455,19 @@ private struct ProviderSectionHeader: View {
     let plan: String?
     let failure: AccountRefreshFailure?
     var openSettings: () -> Void
+    @Environment(\.interfaceStyle) private var interfaceStyle
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: interfaceStyle == .screenTime ? 6 : 7) {
             ProviderIcon(providerID: account.providerID, symbolName: account.customSymbolName)
-                .frame(width: 28, height: 28)
+                .frame(width: iconSide, height: iconSide)
             VStack(alignment: .leading, spacing: 1) {
                 Text(account.resolvedDisplayName)
-                    .font(.headline)
+                    .font(nameFont)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(account.providerSectionTitle(plan: plan))
-                    .font(.caption)
+                    .font(interfaceStyle == .screenTime ? .caption2 : .caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -483,6 +483,16 @@ private struct ProviderSectionHeader: View {
             .buttonStyle(.plain)
         }
         .textCase(nil)
+    }
+
+    /// Screen Time uses a smaller header so the rounded percent stays the figure.
+    /// Classic and Liquid Glass keep the account name as the card title.
+    private var nameFont: Font {
+        interfaceStyle == .screenTime ? .subheadline.weight(.semibold) : .headline
+    }
+
+    private var iconSide: CGFloat {
+        interfaceStyle == .screenTime ? 22 : 28
     }
 
     private var settingsGear: some View {
@@ -607,21 +617,97 @@ struct UsageCard: View {
                     LimitRow(window: window)
                 }
             }
-            extras
+            UsageFooter(snapshot: snapshot)
+        }
+    }
+}
+
+/// Banked reset and forecast share one chevron. The update time is one caption.
+private struct UsageFooter: View {
+    let snapshot: UsageSnapshot
+    @Environment(ForecastSettingsStore.self) private var settingsStore
+    @Environment(CodexResetStore.self) private var codex
+    @State private var expanded = false
+
+    private var showsBanked: Bool {
+        snapshot.availableResetCount > 0 || !snapshot.availableResetCredits.isEmpty
+    }
+
+    private var usageSignature: String {
+        snapshot.usageWindows.map {
+            "\($0.metricID)|\($0.usedPercent)|\($0.resetsAt.timeIntervalSince1970)|\($0.reportsReset)"
+        }.joined(separator: ";")
+    }
+
+    private var pollKey: String {
+        let settings = settingsStore.settings
+        return "\(settings.showsPredictedReset)-\(settings.remindsBeforePredictedReset)-\(snapshot.accountID)"
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            footer(at: context.date)
+        }
+        .onChange(of: usageSignature, initial: true) { _, _ in
+            guard snapshot.accountProviderID == .chatGPT else { return }
+            codex.noteUsage(snapshot.usageWindows.map(ForecastWindow.init), accountID: snapshot.accountID)
+        }
+        .task(id: pollKey) {
+            guard snapshot.accountProviderID == .chatGPT else { return }
+            let settings = settingsStore.settings
+            guard settings.showsPredictedReset || settings.remindsBeforePredictedReset else { return }
+            codex.wake()
+            await codex.refreshIfDue()
         }
     }
 
-    private var extras: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            UsageMoreSection(snapshot: snapshot)
-            ForecastCardExtras(snapshot: snapshot)
-            HStack(alignment: .firstTextBaseline) {
-                Text("Updated")
-                Spacer(minLength: 8)
-                Text(snapshot.fetchedAt, style: .relative)
+    private func footer(at date: Date) -> some View {
+        let title = ForecastCardSnapshot.collapsedTitle(
+            snapshot: snapshot,
+            settings: settingsStore.settings,
+            status: codex.display(at: date),
+            now: date
+        )
+        return VStack(alignment: .leading, spacing: 4) {
+            if showsBanked || title != nil {
+                VStack(alignment: .leading, spacing: 6) {
+                    Button {
+                        expanded.toggle()
+                    } label: {
+                        HStack(alignment: .center, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if let title {
+                                    Text(title)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                if showsBanked {
+                                    BankedResetSummary(snapshot: snapshot, now: date)
+                                }
+                            }
+                            Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(title == nil ? "usage-more-banked" : "forecasts-disclosure")
+                    if expanded {
+                        if showsBanked {
+                            BankedResetDetails(snapshot: snapshot, now: date)
+                        }
+                        ForecastCardExtras(snapshot: snapshot)
+                    }
+                }
             }
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
+            Text(UpdatedCaption.phrase(since: snapshot.fetchedAt, now: date))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("usage-updated")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -706,104 +792,75 @@ struct APIBalanceRow: View {
     }
 }
 
-/// Collapsed banked resets under the limit bars.
-/// Exhaustion and the predicted Codex reset stay in `ForecastCardExtras`, also under the bars.
-private struct UsageMoreSection: View {
+private struct BankedResetSummary: View {
     let snapshot: UsageSnapshot
+    var now: Date
 
-    private var showsBankedResets: Bool {
-        snapshot.availableResetCount > 0 || !snapshot.availableResetCredits.isEmpty
-    }
+    private var count: Int { max(snapshot.availableResetCount, snapshot.availableResetCredits.count) }
 
     var body: some View {
-        if showsBankedResets {
-            BankedResetBar(snapshot: snapshot)
+        VStack(alignment: .leading, spacing: 1) {
+            Text(count == 1
+                 ? String.localized("1 banked reset")
+                 : String(format: String.localized("%lld banked resets"), locale: AppLanguage.current.locale, Int64(count)))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            if let expiry = snapshot.nextBankedResetCredit()?.expiresAt {
+                Text(CountdownDisplay.string(until: expiry, from: now))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private struct BankedResetBar: View {
+private struct BankedResetDetails: View {
     let snapshot: UsageSnapshot
-    @State private var expanded = false
+    var now: Date
 
     private var credits: [ResetCredit] { snapshot.availableResetCredits }
     private var count: Int { max(snapshot.availableResetCount, credits.count) }
 
-    @ViewBuilder
     var body: some View {
-        if let nearest = snapshot.nextBankedResetCredit(), let expiry = nearest.expiresAt {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                content(at: context.date, nearest: nearest, expiry: expiry)
-            }
-        } else {
-            content(at: .now, nearest: nil, expiry: nil)
-        }
-    }
-
-    private func content(at date: Date, nearest: ResetCredit?, expiry: Date?) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                expanded.toggle()
-            } label: {
-                HStack(spacing: 8) {
-                    Text(count == 1
-                         ? String.localized("1 banked reset")
-                         : String(format: String.localized("%lld banked resets"), locale: AppLanguage.current.locale, Int64(count)))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 8)
-                    if let expiry {
-                        Text(CountdownDisplay.string(until: expiry, from: date))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.tertiary)
-                    }
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
+            if let nearest = snapshot.nextBankedResetCredit(),
+               let remaining = nearest.remainingLifetimeFraction(at: now) {
+                UsageMeter(remainingFraction: remaining)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("usage-more-banked")
-            .accessibilityLabel(expanded
-                                ? String.localized("Hide banked reset details")
-                                : String.localized("Show banked reset details"))
-
-            if expanded {
-                if let nearest, let remaining = nearest.remainingLifetimeFraction(at: date) {
-                    UsageMeter(remainingFraction: remaining)
-                }
-                ForEach(Array(credits.enumerated()), id: \.element.id) { index, credit in
-                    HStack {
-                        Text(String(format: String.localized("Reset #%lld"), locale: AppLanguage.current.locale, Int64(index + 1)))
-                        Spacer()
-                        if let expiry = credit.expiresAt {
-                            Text(expiry, format: .dateTime.year().month(.abbreviated).day().hour().minute().second())
-                                .multilineTextAlignment(.trailing)
-                        } else {
-                            Text("Expiry unavailable")
-                        }
-                    }
-                    .foregroundStyle(.secondary)
-                }
-                if count > credits.count {
-                    ForEach(credits.count..<count, id: \.self) { index in
-                        HStack {
-                            Text(String(format: String.localized("Reset #%lld"), locale: AppLanguage.current.locale, Int64(index + 1)))
-                            Spacer()
-                            Text("Expiry unavailable")
-                        }
-                        .foregroundStyle(.secondary)
-                    }
+            ForEach(Array(credits.enumerated()), id: \.element.id) { index, credit in
+                creditRow(index: index, expiry: credit.expiresAt)
+            }
+            if count > credits.count {
+                ForEach(credits.count..<count, id: \.self) { index in
+                    creditRow(index: index, expiry: nil)
                 }
             }
         }
         .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private func creditRow(index: Int, expiry: Date?) -> some View {
+        HStack {
+            Text(String(format: String.localized("Reset #%lld"), locale: AppLanguage.current.locale, Int64(index + 1)))
+            Spacer()
+            if let expiry {
+                Text(expiry, format: .dateTime.year().month(.abbreviated).day().hour().minute().second())
+                    .multilineTextAlignment(.trailing)
+            } else {
+                Text("Expiry unavailable")
+            }
+        }
     }
 }
 
 struct LimitRow: View {
     let window: UsageWindow
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.interfaceStyle) private var interfaceStyle
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -815,7 +872,7 @@ struct LimitRow: View {
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     Text(UsageText.remainingPercent(window.remainingPercent))
-                        .font(.subheadline.weight(.semibold))
+                        .font(percentFont)
                         .monospacedDigit()
                         .foregroundStyle(tint)
                         .lineLimit(1)
@@ -826,9 +883,22 @@ struct LimitRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                UsageMeter(remainingFraction: window.remainingPercent / 100)
+                UsageMeter(
+                    remainingFraction: window.remainingPercent / 100,
+                    prominent: interfaceStyle == .screenTime
+                )
             }
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    /// Screen Time's percent is a larger rounded figure. Classic stays a subheadline.
+    private var percentFont: Font {
+        switch interfaceStyle {
+        case .screenTime:
+            .system(.title3, design: .rounded).weight(.semibold)
+        case .classic, .liquidGlass:
+            .subheadline.weight(.semibold)
         }
     }
 

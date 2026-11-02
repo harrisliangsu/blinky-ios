@@ -31,16 +31,16 @@ are the same idea. Custom ornament is what makes the screen look generated.
 
 ## The grid
 
-Spacing is 4 and 8. 16 is two steps and is the card padding. Do not invent
-a third gap.
+Spacing inside a card is 4 and 8. 16 is the card padding. The gap between
+cards is one token, 14pt, in Classic, Screen Time, and Liquid Glass.
 
 | Role | Style | Use |
 | --- | --- | --- |
-| Title | Headline, semibold | Account name only |
+| Title | Headline. Screen Time uses subheadline | Account name |
 | Name | Subheadline, regular | Limit name, settings row |
-| Value | Subheadline, semibold, rounded, monospaced digits | Percent, trailing |
+| Value | Subheadline semibold in Classic and Liquid Glass. Screen Time uses Title 3, semibold, SF Rounded, monospaced digits | Percent, trailing |
 | Secondary | Caption, secondary color | Reset, plan, forecast |
-| Caption | Caption 2, tertiary | Updated |
+| Caption | Caption 2, tertiary | "Updated 12s ago" as one line |
 
 A row uses at most two weights: regular for the name, semibold for the
 value. The caption under the name stays regular.
@@ -53,9 +53,11 @@ grouped list corner.
 Row height is the text line, an optional 4pt caption, then the bar.
 About 44pt when there is no caption, about 64pt with a reset line.
 
-Settings and Classic usage are lists. Screen Time and Liquid Glass are
-the same rows on a different surface: a cool gray page, or a glass plate
-on a tinted field. The surface changes. The row does not.
+Classic is the system grouped list: thin capsule bars, subheadline percent,
+headline account name. Screen Time keeps that row, on a cool page, with a
+larger rounded percent, a square block bar, and a small secondary header.
+Liquid Glass is one glass surface per account — a single hairline and a
+soft shadow, not a plate inside the grouped card.
 
 One accent: the remaining-allowance color, on the percent and the bar
 only. No leading stripe, no colored icon tile, no second hue for
@@ -65,9 +67,13 @@ decoration.
 
 - **Quota row.** Name left, percent right, reset caption under the name,
   bar full width.
-- **Account header.** 28pt icon, name, plan. Gear on the trailing edge.
-  8pt between the header and the first quota row.
-- **Footer.** Banked reset, forecast, and updated are one block of
-  secondary text, 4pt apart, same leading edge as the quota names.
+- **Account header.** Icon, name, plan. Gear on the trailing edge.
+  Screen Time's name is a step smaller than Classic. 8pt between the
+  header and the first quota row.
+- **Footer.** Banked reset and forecast are one disclosure, one chevron.
+  Updated is a single caption under that block: "Updated 12s ago".
+- **Forecast.** A pace that empties before reset says how long from now
+  ("Runs out in ~3d"). A pace that lasts the window says so, with no
+  number. The number is time until empty, not time past the reset.
 - **Settings.** Stock labels and grouped rows. Style is the page surface,
   not a custom icon.
