@@ -1,4 +1,4 @@
-name: Reinvite beta tester
+name: Reinvite internal tester
 
 on:
   push:
