@@ -1354,10 +1354,6 @@ private struct HeatmapQuotaTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: featured ? 6 : 4) {
             HStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(accent)
-                    .frame(width: 5, height: featured ? 18 : 14)
-                    .accessibilityHidden(true)
                 Text(target.title)
                     .font(featured ? .caption.weight(.semibold) : .caption2.weight(.semibold))
                     .lineLimit(featured ? 2 : 1)
@@ -2147,21 +2143,14 @@ private struct LiveActivityBackground: ViewModifier {
 private struct LiveAccountBar: View {
     let account: UsageActivityAccountRow
     var onDarkSurface = false
-    @Environment(\.interfaceStyle) private var interfaceStyle
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        switch interfaceStyle {
+        switch InterfaceStyle.current {
         case .classic:
             stack
         case .screenTime:
-            HStack(alignment: .top, spacing: 8) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 4)
-                    .accessibilityHidden(true)
-                stack
-            }
+            stack
         case .liquidGlass:
             if onDarkSurface {
                 stack
@@ -2196,13 +2185,11 @@ private struct LiveAccountBar: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(UsageText.remainingPercent(account.headlineRemainingPercent))
-                    .font((interfaceStyle == .screenTime ? Font.subheadline.weight(.bold) : Font.caption).monospacedDigit())
-                    .foregroundStyle(interfaceStyle == .screenTime ? AnyShapeStyle(tint) : AnyShapeStyle(.primary))
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
             }
-            UsageMeter(
-                remainingFraction: account.headlineRemainingPercent / 100,
-                prominent: interfaceStyle == .screenTime
-            )
+            UsageMeter(remainingFraction: account.headlineRemainingPercent / 100)
             if let secondary = account.secondaryTitle, let percent = account.secondaryRemainingPercent {
                 Text("\(secondary) \(UsageText.remainingPercent(percent))")
                     .font(.caption2)

@@ -116,7 +116,7 @@ struct UsageListSurface: ViewModifier {
             content
         case .screenTime:
             content
-                .blinkyScreenTimeListSpacing()
+                .blinkyScreenTimeListSpacing(8)
                 .scrollContentBackground(.hidden)
                 .background(InterfacePalette.screenTimeCanvas(colorScheme).ignoresSafeArea())
         case .liquidGlass:
@@ -206,9 +206,9 @@ private struct GlassSectionFill: View {
 extension View {
     /// Extra air between account cards. The spacing API is iOS-only.
     @ViewBuilder
-    func blinkyScreenTimeListSpacing() -> some View {
+    func blinkyScreenTimeListSpacing(_ spacing: CGFloat = 8) -> some View {
         #if os(iOS)
-        self.listSectionSpacing(18)
+        self.listSectionSpacing(spacing)
         #else
         self
         #endif
@@ -261,7 +261,7 @@ extension View {
     /// a light rim, and a shadow so the plate still separates from the page.
     @ViewBuilder
     func blinkyGlassPlate() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         #if os(iOS)
         if #available(iOS 26, *) {
             self
@@ -330,25 +330,13 @@ private struct StyledMultiAccountRow: View {
 
     var body: some View {
         switch interfaceStyle {
-        case .classic:
+        case .classic, .screenTime:
             row.padding(.vertical, 1)
-        case .screenTime:
-            HStack(alignment: .top, spacing: 6) {
-                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 3)
-                    .accessibilityHidden(true)
-                row
-            }
         case .liquidGlass:
             row
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.45), lineWidth: 0.5)
-                }
         }
     }
 
@@ -428,13 +416,7 @@ struct StyledLiveAccountRow: View {
         case .classic:
             stack
         case .screenTime:
-            HStack(alignment: .top, spacing: 8) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 4)
-                    .accessibilityHidden(true)
-                stack
-            }
+            stack
         case .liquidGlass:
             if onDarkSurface {
                 stack

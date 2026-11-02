@@ -190,3 +190,9 @@ jobs:
 
       - name: Test Linux installation and upgrade
         run: sudo env WHEN_RESET_INSTALL_TEST=1 bash scripts/test-linux-install.sh
+
+  screenshots:
+    name: Simulator screenshots
+    needs: app
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/ui-screenshots.yml

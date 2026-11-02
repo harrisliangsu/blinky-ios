@@ -232,15 +232,13 @@ private struct UsageTabView: View {
                         AccountReorderRow(account: account)
                             .modifier(UsageAccountChrome(style: interfaceStyle))
                     } else {
-                        VStack(alignment: .leading, spacing: interfaceStyle == .liquidGlass ? 10 : 4) {
-                            if interfaceStyle == .liquidGlass {
-                                ProviderSectionHeader(
-                                    account: account,
-                                    plan: snapshot?.plan ?? account.plan,
-                                    failure: failure,
-                                    openSettings: { settingsAccount = account }
-                                )
-                            }
+                        VStack(alignment: .leading, spacing: 8) {
+                            ProviderSectionHeader(
+                                account: account,
+                                plan: snapshot?.plan ?? account.plan,
+                                failure: failure,
+                                openSettings: { settingsAccount = account }
+                            )
                             if let failure {
                                 AccountFailureView(
                                     account: account,
@@ -261,15 +259,6 @@ private struct UsageTabView: View {
                             }
                         }
                         .modifier(UsageAccountChrome(style: interfaceStyle))
-                    }
-                } header: {
-                    if interfaceStyle != .liquidGlass, !editingAccountOrder {
-                        ProviderSectionHeader(
-                            account: account,
-                            plan: snapshot?.plan ?? account.plan,
-                            failure: failure,
-                            openSettings: { settingsAccount = account }
-                        )
                     }
                 }
                 .swipeActions {
@@ -466,26 +455,15 @@ private struct ProviderSectionHeader: View {
     let account: MonitoredAccount
     let plan: String?
     let failure: AccountRefreshFailure?
-    /// Set when this header sits inside a list row. A `NavigationLink` there
-    /// adds a second chevron and leaves the gear beside the name.
-    var openSettings: (() -> Void)? = nil
-
-    @Environment(\.interfaceStyle) private var interfaceStyle
+    var openSettings: () -> Void
 
     var body: some View {
         HStack(spacing: 7) {
             ProviderIcon(providerID: account.providerID, symbolName: account.customSymbolName)
-                .frame(width: interfaceStyle == .screenTime ? 36 : 28, height: interfaceStyle == .screenTime ? 36 : 28)
-                .padding(interfaceStyle == .screenTime ? 4 : 0)
-                .background {
-                    if interfaceStyle == .screenTime {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.accentColor.opacity(0.16))
-                    }
-                }
+                .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(account.resolvedDisplayName)
-                    .font(interfaceStyle == .screenTime ? .title3.weight(.semibold) : .headline)
+                    .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(account.providerSectionTitle(plan: plan))
@@ -499,19 +477,10 @@ private struct ProviderSectionHeader: View {
                     .accessibilityLabel(failure.title)
             }
             Spacer(minLength: 10)
-            if let openSettings {
-                Button(action: openSettings) {
-                    settingsGear
-                }
-                .buttonStyle(.plain)
-            } else {
-                NavigationLink {
-                    AccountSettingsView(account: account)
-                } label: {
-                    settingsGear
-                }
-                .buttonStyle(.plain)
+            Button(action: openSettings) {
+                settingsGear
             }
+            .buttonStyle(.plain)
         }
         .textCase(nil)
     }
@@ -622,10 +591,9 @@ private struct AccountFailureView: View {
 
 struct UsageCard: View {
     let snapshot: UsageSnapshot
-    @Environment(\.interfaceStyle) private var interfaceStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: interfaceStyle == .screenTime ? 16 : 12) {
+        VStack(alignment: .leading, spacing: 8) {
             if let balance = snapshot.apiBalance {
                 APIBalanceRow(balance: balance)
             }
@@ -634,42 +602,28 @@ struct UsageCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            } else if interfaceStyle == .screenTime {
-                screenTimeLimits
             } else {
                 ForEach(Array(snapshot.usageWindows.enumerated()), id: \.offset) { _, window in
-                    LimitRow(window: window, prominent: interfaceStyle == .liquidGlass)
+                    LimitRow(window: window)
                 }
             }
             extras
-                .modifier(UsageExtrasChrome(style: interfaceStyle))
-        }
-        .padding(.vertical, interfaceStyle == .classic ? 2 : 4)
-    }
-
-    private var screenTimeLimits: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let primary = snapshot.usageWindows.first {
-                ScreenTimeHero(window: primary)
-            }
-            ForEach(Array(snapshot.usageWindows.dropFirst().enumerated()), id: \.offset) { _, window in
-                ScreenTimeCategoryRow(window: window)
-            }
         }
     }
 
     private var extras: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             UsageMoreSection(snapshot: snapshot)
             ForecastCardExtras(snapshot: snapshot)
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text("Updated")
-                Spacer()
+                Spacer(minLength: 8)
                 Text(snapshot.fetchedAt, style: .relative)
             }
             .font(.caption2)
             .foregroundStyle(.tertiary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -849,139 +803,37 @@ private struct BankedResetBar: View {
 
 struct LimitRow: View {
     let window: UsageWindow
-    var prominent = false
     @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(window.displayTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    if window.showsCountdown {
-                        Text(CountdownDisplay.usageString(until: window.resetsAt, from: context.date))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-                }
-                Text(UsageText.remainingPercent(window.remainingPercent))
-                    .font((prominent ? Font.title2 : Font.title3).bold().monospacedDigit())
-                    .foregroundStyle(tint)
-                UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: prominent)
-            }
-        }
-    }
-
-    private var tint: Color {
-        UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
-    }
-}
-
-/// Screen Time's primary reading: a small label, a large figure, then a block bar.
-private struct ScreenTimeHero: View {
-    let window: UsageWindow
-    @Environment(\.colorScheme) private var colorScheme
-    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 44
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             VStack(alignment: .leading, spacing: 4) {
-                Text(window.displayTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.8)
-                    .lineLimit(1)
-                    .accessibilityLabel(window.displayTitle)
-                Text(UsageText.remainingPercent(window.remainingPercent))
-                    .font(.system(size: heroSize, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(tint)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(window.displayTitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(UsageText.remainingPercent(window.remainingPercent))
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(tint)
+                        .lineLimit(1)
+                }
                 if window.showsCountdown {
                     Text(CountdownDisplay.resetsInPhrase(until: window.resetsAt, from: context.date))
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: true)
-                    .padding(.top, 4)
+                UsageMeter(remainingFraction: window.remainingPercent / 100)
             }
+            .accessibilityElement(children: .combine)
         }
     }
 
     private var tint: Color {
         UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
-    }
-}
-
-/// A Screen Time subcategory: a color rail, the name, and a shorter block bar.
-private struct ScreenTimeCategoryRow: View {
-    let window: UsageWindow
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            HStack(alignment: .top, spacing: 10) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 4)
-                    .frame(minHeight: 36)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(window.displayTitle)
-                            .font(.subheadline.weight(.medium))
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Text(UsageText.remainingPercent(window.remainingPercent))
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(tint)
-                    }
-                    if window.showsCountdown {
-                        Text(CountdownDisplay.usageString(until: window.resetsAt, from: context.date))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    UsageMeter(remainingFraction: window.remainingPercent / 100, prominent: false)
-                }
-            }
-        }
-    }
-
-    private var tint: Color {
-        UsageMeterTint.color(remainingFraction: window.remainingPercent / 100, colorScheme: colorScheme)
-    }
-}
-
-private struct UsageExtrasChrome: ViewModifier {
-    var style: InterfaceStyle
-
-    func body(content: Content) -> some View {
-        switch style {
-        case .classic:
-            content
-                .padding(.top, 4)
-                .overlay(alignment: .top) { Divider() }
-        case .screenTime:
-            content
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    Color.primary.opacity(0.06),
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                )
-        case .liquidGlass:
-            content
-                .padding(10)
-                .blinkyInsetGlass()
-        }
     }
 }
 #endif
