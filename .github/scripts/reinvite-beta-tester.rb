@@ -6,6 +6,7 @@ require "net/http"
 require "openssl"
 require "uri"
 
+STDOUT.sync = true
 API_ROOT = "https://api.appstoreconnect.apple.com"
 EMAIL = ENV.fetch("BETA_TESTER_EMAIL", "sharkchili.su@gmail.com")
 BUNDLE_ID = ENV.fetch("APP_BUNDLE_ID", "com.harrisliangsu.whenreset")
@@ -73,7 +74,7 @@ def error_text(parsed)
   parsed.dig("errors")&.map { |error| [error["title"], error["detail"]].compact.join(": ") }&.join("; ") || parsed.to_s
 end
 
-def create_tester(token, email, app_id, group_id)
+def create_tester(token, email, first_name, last_name, group_ids)
   request_json(
     :post,
     "/v1/betaTesters",
@@ -81,13 +82,21 @@ def create_tester(token, email, app_id, group_id)
     {
       data: {
         type: "betaTesters",
-        attributes: { email: email, firstName: "Harris", lastName: "Su" },
+        attributes: { email: email, firstName: first_name, lastName: last_name },
         relationships: {
-          apps: { data: [{ type: "apps", id: app_id }] },
-          betaGroups: { data: [{ type: "betaGroups", id: group_id }] }
+          betaGroups: { data: group_ids.map { |id| { type: "betaGroups", id: id } } }
         }
       }
     }
+  )
+end
+
+def add_tester_to_group(token, group_id, tester_id)
+  request_json(
+    :post,
+    "/v1/betaGroups/#{group_id}/relationships/betaTesters",
+    token,
+    { data: [{ type: "betaTesters", id: tester_id }] }
   )
 end
 
@@ -231,7 +240,7 @@ def ensure_external_group(token, app_id, groups)
   created
 end
 
-def invite_external(token, app_id, groups, testers)
+def invite_external(token, app_id, groups, testers, first_name, last_name)
   external = ensure_external_group(token, app_id, groups)
   already = testers.select do |tester|
     group_ids = tester.dig("relationships", "betaGroups", "data")&.map { |row| row["id"] } || []
@@ -239,7 +248,7 @@ def invite_external(token, app_id, groups, testers)
   end
   if already.empty?
     delete_testers(token, testers)
-    code, body = create_tester(token, EMAIL, app_id, external.fetch("id"))
+    code, body = create_tester(token, EMAIL, first_name, last_name, [external.fetch("id")])
     if code.between?(200, 299)
       puts "INVITE_SENT external tester id=#{body.dig("data", "id")} email=#{EMAIL}"
     else
@@ -327,21 +336,54 @@ gmail_user = users.find { |user| user.dig("attributes", "username").to_s.casecmp
 gmail_user ||= filtered_body.fetch("data").find { |user| user.dig("attributes", "username").to_s.casecmp(EMAIL).zero? } if filtered_code == 200
 qq_users = users.select { |user| user.dig("attributes", "username").to_s.downcase.end_with?("@qq.com") }
 puts "Gmail ASC user present=#{!gmail_user.nil?} qq ASC users=#{qq_users.map { |user| user.dig("attributes", "username") }.inspect}"
+first_name = gmail_user&.dig("attributes", "firstName").to_s
+first_name = "Harris" if first_name.empty?
+last_name = gmail_user&.dig("attributes", "lastName").to_s
+last_name = "Su" if last_name.empty?
 
 # An internal TestFlight invite is accepted with the App Store Connect user's Apple ID.
-# Re-adding the gmail only helps when that username is the gmail. The phone already
-# reported that this invite is bound to a qq.com Apple ID.
+# That username is the gmail address, so a fresh internal invite is the one the phone can accept.
+# There is no qq.com App Store Connect user to bind instead.
 if gmail_user
   puts "ACTION reinvite-internal because an App Store Connect user has Apple ID #{EMAIL}"
   delete_testers(token, testers)
-  code, body = create_tester(token, EMAIL, app_id, internal.fetch("id"))
-  if code.between?(200, 299)
-    puts "INVITE_SENT internal tester id=#{body.dig("data", "id")} email=#{EMAIL}"
-    puts "BETA_REVIEW_NOT_REQUIRED internal group"
-  else
+  internal_groups = groups.select { |group| group.dig("attributes", "isInternalGroup") == true }
+  code, body = nil
+  created = nil
+  5.times do |attempt|
+    group_ids = attempt.zero? ? internal_groups.map { |group| group.fetch("id") } : [internal.fetch("id")]
+    code, body = create_tester(token, EMAIL, first_name, last_name, group_ids)
+    if code.between?(200, 299)
+      created = body.fetch("data")
+      if group_ids.length == 1
+        internal_groups.each do |group|
+          next if group.fetch("id") == internal.fetch("id")
+
+          add_code, add_body = add_tester_to_group(token, group.fetch("id"), created.fetch("id"))
+          puts "Added tester to #{group.dig("attributes", "name")} HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299)}"
+        end
+      end
+      break
+    end
+    puts "INTERNAL_INVITE_ATTEMPT #{attempt + 1} HTTP #{code}: #{error_text(body)}"
+    sleep 3
+  end
+  unless created
     puts "INTERNAL_INVITE_FAILED HTTP #{code}: #{error_text(body)}"
-    puts "ACTION external-group after internal reinvite failed"
-    invite_external(token, app_id, groups, [])
+    raise "Internal reinvite failed"
+  end
+  puts "INVITE_SENT internal tester id=#{created.fetch("id")} email=#{EMAIL} groups=#{internal_groups.map { |group| group.dig("attributes", "name") }.inspect}"
+  puts "BETA_REVIEW_NOT_REQUIRED internal group"
+  external = groups.find { |group| group.dig("attributes", "name") == EXTERNAL_GROUP && group.dig("attributes", "isInternalGroup") == false }
+  if external
+    members_code, members_body = request_json(:get, "/v1/betaGroups/#{external.fetch("id")}/betaTesters?limit=20", token)
+    members = members_code == 200 ? members_body.fetch("data") : nil
+    if members&.empty?
+      delete_code, delete_body = request_json(:delete, "/v1/betaGroups/#{external.fetch("id")}", token)
+      puts "Deleted empty external group #{external.fetch("id")} HTTP #{delete_code} #{error_text(delete_body) unless delete_code.between?(200, 299)}"
+    else
+      puts "Left external group #{external.fetch("id")} in place members=#{members&.length || "unknown"}"
+    end
   end
 else
   reason = if users_code != 200
@@ -352,5 +394,5 @@ else
     "no App Store Connect user has Apple ID #{EMAIL}"
   end
   puts "ACTION external-group because #{reason}. Internal testing cannot be accepted by Apple ID #{EMAIL}."
-  invite_external(token, app_id, groups, testers)
+  invite_external(token, app_id, groups, testers, first_name, last_name)
 end
