@@ -313,6 +313,114 @@ def invite_external(token, app_id, groups, first_name, last_name)
   puts "INTERNAL_MEMBERSHIP_UNCHANGED tester=#{OLD_TESTER_ID}"
 end
 
+def remove_tester_from_group(token, group, tester_id)
+  code, body = request_json(
+    :delete,
+    "/v1/betaGroups/#{group.fetch("id")}/relationships/betaTesters",
+    token,
+    { data: [{ type: "betaTesters", id: tester_id }] }
+  )
+  puts "REMOVED_FROM_GROUP name=#{group.dig("attributes", "name").inspect} tester=#{tester_id} HTTP #{code} #{error_text(body) unless code.between?(200, 299) || code == 404 || code == 409}"
+  code
+end
+
+def delete_tester_resource(token, tester_id)
+  code, body = request_json(:delete, "/v1/betaTesters/#{tester_id}", token)
+  puts "DELETE_TESTER id=#{tester_id} HTTP #{code} #{error_text(body) unless code.between?(200, 299) || code == 404}"
+  code
+end
+
+def email_tester_ids(token)
+  code, body = request_json(:get, api_path("/v1/betaTesters", { "filter[email]" => EMAIL, "limit" => "20" }), token)
+  ids = code == 200 ? body.fetch("data").map { |tester| tester.fetch("id") } : nil
+  [code, ids]
+end
+
+def poll_email_gone(token, label, seconds)
+  deadline = Time.now + seconds
+  attempt = 0
+  while Time.now < deadline
+    sleep 10
+    attempt += 1
+    code, ids = email_tester_ids(token)
+    puts "POLL_#{label} #{attempt} HTTP #{code} ids=#{ids.inspect}"
+    return true if code == 200 && ids.empty?
+  end
+  false
+end
+
+def cycle_internal(token, app_id, groups, internal, first_name, last_name)
+  code, ids = email_tester_ids(token)
+  puts "CYCLE_START HTTP #{code} ids=#{ids.inspect}"
+  tester_ids = (ids || []) | [OLD_TESTER_ID]
+
+  groups.each do |group|
+    tester_ids.each { |tester_id| remove_tester_from_group(token, group, tester_id) }
+  end
+  tester_ids.each { |tester_id| delete_tester_resource(token, tester_id) }
+  poll_email_gone(token, "AFTER_INTERNAL_DELETE", 60)
+
+  external = ensure_external_group(token, app_id, groups)
+  external_code, external_body = create_internal_tester(token, EMAIL, first_name, last_name, [external.fetch("id")])
+  external_id = external_body.dig("data", "id")
+  puts "EXTERNAL_CYCLE_CREATE HTTP #{external_code} id=#{external_id} #{error_text(external_body) unless external_code.between?(200, 299)}"
+
+  if external_code.between?(200, 299) && external_id
+    remove_tester_from_group(token, external, external_id)
+    delete_tester_resource(token, external_id)
+  end
+  code, ids = email_tester_ids(token)
+  (ids || []).each { |tester_id| delete_tester_resource(token, tester_id) }
+  poll_email_gone(token, "AFTER_EXTERNAL_DELETE", 60)
+
+  internal_code = nil
+  internal_body = nil
+  new_id = nil
+  3.times do |attempt|
+    internal_code, internal_body = create_internal_tester(token, EMAIL, first_name, last_name, [internal.fetch("id")])
+    new_id = internal_body.dig("data", "id")
+    puts "INTERNAL_CREATE attempt=#{attempt + 1} HTTP #{internal_code} id=#{new_id} state=#{internal_body.dig("data", "attributes", "state")} #{error_text(internal_body) unless internal_code.between?(200, 299)}"
+    break if internal_code.between?(200, 299) && new_id
+
+    sleep 5
+  end
+  raise "Internal restore failed" unless internal_code.between?(200, 299) && new_id
+
+  puts "OLD_TESTER_ID #{OLD_TESTER_ID}"
+  puts "NEW_TESTER_ID #{new_id}"
+  puts "TESTER_ID_CHANGED #{new_id != OLD_TESTER_ID}"
+  if new_id == OLD_TESTER_ID
+    puts "CYCLE_REUSED_OLD_ID #{OLD_TESTER_ID}"
+  else
+    puts "INVITE_SENT internal tester id=#{new_id} email=#{EMAIL}"
+  end
+
+  build = find_ios_build(token, app_id)
+  if build
+    assign_code = assign_build_to_group(token, internal.fetch("id"), build)
+    puts "ASSIGN_INTERNAL_BUILD HTTP #{assign_code} build=#{build.fetch("id")} version=#{build.dig("attributes", "version")}"
+  else
+    puts "ASSIGN_INTERNAL_BUILD missing #{MARKETING_VERSION} (#{BUILD_NUMBER})"
+  end
+
+  members_code, members_body = request_json(:get, "/v1/betaGroups/#{external.fetch("id")}/betaTesters?limit=20", token)
+  external_members = members_code == 200 ? members_body.fetch("data") : []
+  external_members.each { |tester| remove_tester_from_group(token, external, tester.fetch("id")) if tester.dig("attributes", "email").to_s.casecmp(EMAIL).zero? }
+  if members_code == 200 && external_members.reject { |tester| tester.dig("attributes", "email").to_s.casecmp(EMAIL).zero? }.empty?
+    delete_code, delete_body = request_json(:delete, "/v1/betaGroups/#{external.fetch("id")}", token)
+    puts "DELETED_EXTERNAL_GROUP id=#{external.fetch("id")} HTTP #{delete_code} #{error_text(delete_body) unless delete_code.between?(200, 299)}"
+  else
+    puts "EXTERNAL_GROUP_LEFT id=#{external.fetch("id")} members=#{external_members.length}"
+  end
+
+  final_code, final_ids = email_tester_ids(token)
+  internal_members_code, internal_members_body = request_json(:get, "/v1/betaGroups/#{internal.fetch("id")}/betaTesters?limit=20", token)
+  internal_members = internal_members_code == 200 ? internal_members_body.fetch("data").map { |tester| "#{tester.fetch("id")}:#{tester.dig("attributes", "state")}" } : []
+  puts "FINAL_EMAIL_TESTERS HTTP #{final_code} ids=#{final_ids.inspect}"
+  puts "FINAL_INTERNAL_MEMBERS #{internal_members.inspect}"
+  puts "BETA_REVIEW_NOT_USED cycle ended on internal"
+end
+
 def create_internal_tester(token, email, first_name, last_name, group_ids)
   request_json(
     :post,
@@ -391,6 +499,17 @@ internal_groups.each do |group|
     attributes = build.fetch("attributes")
     puts "GROUP_BUILD group=#{group.dig("attributes", "name").inspect} id=#{build.fetch("id")} version=#{attributes["version"]} processing=#{attributes["processingState"]}"
   end
+end
+
+if ENV["CYCLE_INTERNAL"] == "1"
+  raise "No App Store Connect user uses Apple ID #{EMAIL}" unless gmail_user
+
+  first_name = gmail_user.dig("attributes", "firstName").to_s
+  first_name = "Kong" if first_name.empty?
+  last_name = gmail_user.dig("attributes", "lastName").to_s
+  last_name = "Yi" if last_name.empty?
+  cycle_internal(token, app_id, groups, internal, first_name, last_name)
+  exit 0
 end
 
 if ENV["EXTERNAL_INVITE"] == "1"
