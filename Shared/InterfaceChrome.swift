@@ -1,4 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// How a continuous meter is drawn for one interface style.
 ///
@@ -35,6 +40,15 @@ enum InterfacePalette {
             ? Color(red: 0.07, green: 0.08, blue: 0.11)
             : Color(red: 0.88, green: 0.91, blue: 0.96)
     }
+
+    /// Opaque page fill. `UIColor.systemBackground` has no macOS name.
+    static var pageBackground: Color {
+        #if os(iOS)
+        Color(uiColor: .systemBackground)
+        #else
+        Color(nsColor: .windowBackgroundColor)
+        #endif
+    }
 }
 
 /// Saturated field behind Liquid Glass, so the blur has something to blur.
@@ -70,7 +84,7 @@ struct InterfaceWidgetBackground: View {
     var body: some View {
         switch interfaceStyle {
         case .classic:
-            Color(.systemBackground)
+            InterfacePalette.pageBackground
         case .screenTime:
             InterfacePalette.screenTimeCanvas(colorScheme)
         case .liquidGlass:
@@ -92,7 +106,7 @@ struct UsageListSurface: ViewModifier {
             content
         case .screenTime:
             content
-                .listSectionSpacing(18)
+                .blinkyScreenTimeListSpacing()
                 .scrollContentBackground(.hidden)
                 .background(InterfacePalette.screenTimeCanvas(colorScheme).ignoresSafeArea())
         case .liquidGlass:
@@ -113,7 +127,7 @@ struct UsageAccountChrome: ViewModifier {
         case .screenTime:
             content
                 .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
-                .listRowBackground(Color(.systemBackground))
+                .listRowBackground(InterfacePalette.pageBackground)
         case .liquidGlass:
             content
                 .blinkyGlassPlate()
@@ -132,14 +146,8 @@ private struct BlinkyNavigationChrome: ViewModifier {
         switch style {
         case .classic:
             content
-        case .screenTime:
-            content
-                .toolbarBackground(InterfacePalette.screenTimeCanvas(colorScheme), for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
-        case .liquidGlass:
-            content
-                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+        case .screenTime, .liquidGlass:
+            content.blinkyNavigationBarBackground(style, colorScheme: colorScheme)
         }
     }
 }
@@ -156,14 +164,12 @@ private struct SettingsCanvasModifier: ViewModifier {
             content
                 .scrollContentBackground(.hidden)
                 .background(InterfacePalette.screenTimeCanvas(colorScheme).ignoresSafeArea())
-                .toolbarBackground(InterfacePalette.screenTimeCanvas(colorScheme), for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+                .blinkyNavigationBarBackground(style, colorScheme: colorScheme)
         case .liquidGlass:
             content
                 .scrollContentBackground(.hidden)
                 .background(InterfaceGlassBackdrop())
-                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+                .blinkyNavigationBarBackground(style, colorScheme: colorScheme)
         }
     }
 }
@@ -176,7 +182,7 @@ private struct SettingsSectionModifier: ViewModifier {
         case .classic:
             content
         case .screenTime:
-            content.listRowBackground(Color(.systemBackground))
+            content.listRowBackground(InterfacePalette.pageBackground)
         case .liquidGlass:
             content.listRowBackground(GlassSectionFill())
         }
@@ -190,6 +196,37 @@ private struct GlassSectionFill: View {
 }
 
 extension View {
+    /// Extra air between account cards. The spacing API is iOS-only.
+    @ViewBuilder
+    func blinkyScreenTimeListSpacing() -> some View {
+        #if os(iOS)
+        self.listSectionSpacing(18)
+        #else
+        self
+        #endif
+    }
+
+    /// Navigation-bar material. `ToolbarPlacement.navigationBar` is iOS-only.
+    @ViewBuilder
+    func blinkyNavigationBarBackground(_ style: InterfaceStyle, colorScheme: ColorScheme) -> some View {
+        #if os(iOS)
+        switch style {
+        case .classic:
+            self
+        case .screenTime:
+            self
+                .toolbarBackground(InterfacePalette.screenTimeCanvas(colorScheme), for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        case .liquidGlass:
+            self
+                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        }
+        #else
+        self
+        #endif
+    }
+
     func blinkyNavigationGlass(_ style: InterfaceStyle) -> some View {
         modifier(BlinkyNavigationChrome(style: style))
     }
