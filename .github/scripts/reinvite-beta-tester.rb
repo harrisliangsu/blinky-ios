@@ -501,6 +501,64 @@ internal_groups.each do |group|
   end
 end
 
+if ENV["REINVITE_AFTER_STOP"] == "1"
+  raise "No App Store Connect user uses Apple ID #{EMAIL}" unless gmail_user
+
+  first_name = gmail_user.dig("attributes", "firstName").to_s
+  first_name = "Kong" if first_name.empty?
+  last_name = gmail_user.dig("attributes", "lastName").to_s
+  last_name = "Yi" if last_name.empty?
+  _code, ids = email_tester_ids(token)
+  tester_ids = ((ids || []) + [OLD_TESTER_ID]).uniq
+  puts "REINVITE_DELETE ids=#{tester_ids.inspect}"
+  groups.each do |group|
+    tester_ids.each { |tester_id| remove_tester_from_group(token, group, tester_id) }
+  end
+  tester_ids.each { |tester_id| delete_tester_resource(token, tester_id) }
+  gone = poll_email_gone(token, "AFTER_DELETE", 90)
+  puts "EMAIL_FILTER_EMPTY #{gone}"
+
+  create_code, create_body = create_internal_tester(token, EMAIL, first_name, last_name, [internal.fetch("id")])
+  new_id = create_body.dig("data", "id")
+  puts "INTERNAL_CREATE HTTP #{create_code} id=#{new_id} state=#{create_body.dig("data", "attributes", "state")} #{error_text(create_body) unless create_code.between?(200, 299)}"
+  raise "Internal reinvite failed" unless create_code.between?(200, 299) && new_id
+
+  blinky = internal_groups.find { |group| group.dig("attributes", "name") == "Blinky Internal" }
+  if blinky
+    add_code, add_body = add_tester_to_group(token, blinky.fetch("id"), new_id)
+    puts "ADDED_BLINKY HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299) || add_code == 409}"
+  end
+
+  groups.select { |group| group.dig("attributes", "isInternalGroup") == false }.each do |group|
+    remove_tester_from_group(token, group, new_id)
+  end
+
+  build = find_ios_build(token, app_id)
+  if build
+    assign_code = assign_build_to_group(token, internal.fetch("id"), build)
+    puts "ASSIGN_INTERNAL_BUILD HTTP #{assign_code} build=#{build.fetch("id")} version=#{build.dig("attributes", "version")}"
+  end
+
+  puts "OLD_TESTER_ID #{OLD_TESTER_ID}"
+  puts "NEW_TESTER_ID #{new_id}"
+  puts "TESTER_ID_CHANGED #{new_id != OLD_TESTER_ID}"
+  if new_id == OLD_TESTER_ID
+    puts "REINVITE_REUSED_OLD_ID #{OLD_TESTER_ID}"
+  else
+    puts "INVITE_SENT internal tester id=#{new_id} email=#{EMAIL}"
+  end
+
+  internal_groups.each do |group|
+    members_code, members_body = request_json(:get, "/v1/betaGroups/#{group.fetch("id")}/betaTesters?limit=20", token)
+    members = members_code == 200 ? members_body.fetch("data").map { |tester| "#{tester.fetch("id")}:#{tester.dig("attributes", "email")}:#{tester.dig("attributes", "state")}" } : []
+    puts "FINAL_GROUP name=#{group.dig("attributes", "name").inspect} HTTP #{members_code} #{members.inspect}"
+  end
+  final_code, final_ids = email_tester_ids(token)
+  puts "FINAL_EMAIL_TESTERS HTTP #{final_code} ids=#{final_ids.inspect}"
+  puts "BETA_REVIEW_NOT_USED internal only"
+  exit 0
+end
+
 if ENV["ENSURE_INTERNAL_MEMBERSHIP"] == "1"
   add_code, add_body = add_tester_to_group(token, internal.fetch("id"), OLD_TESTER_ID)
   puts "ENSURE_INTERNAL_ADD HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299) || add_code == 409}"
