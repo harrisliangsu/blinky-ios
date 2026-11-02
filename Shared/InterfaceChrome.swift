@@ -319,6 +319,7 @@ private struct StyledMultiAccountRow: View {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(tint)
                     .frame(width: 3)
+                    .accessibilityHidden(true)
                 row
             }
         case .liquidGlass:
@@ -413,6 +414,7 @@ struct StyledLiveAccountRow: View {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(tint)
                     .frame(width: 4)
+                    .accessibilityHidden(true)
                 stack
             }
         case .liquidGlass:

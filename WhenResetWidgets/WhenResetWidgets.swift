@@ -2159,6 +2159,7 @@ private struct LiveAccountBar: View {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(tint)
                     .frame(width: 4)
+                    .accessibilityHidden(true)
                 stack
             }
         case .liquidGlass:

@@ -86,6 +86,7 @@ enum InterfaceStyle: String, CaseIterable, Identifiable, Sendable {
     static func choose(_ style: InterfaceStyle) {
         UserDefaults.standard.set(style.rawValue, forKey: storageKey)
         UserDefaults(suiteName: AppIdentity.appGroupIdentifier)?.set(style.rawValue, forKey: storageKey)
+        AppAppearance.reloadWidgets()
         NotificationCenter.default.post(name: .blinkyInterfaceStyleChanged, object: style)
     }
 }

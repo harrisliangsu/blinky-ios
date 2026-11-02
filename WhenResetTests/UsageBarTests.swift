@@ -55,4 +55,45 @@ final class UsageBarTests: XCTestCase {
         XCTAssertNotEqual(classic, screenTime)
         XCTAssertNotEqual(screenTime, glass)
     }
+
+    func testInterfaceStyleDefaultsToLiquidGlassAndIgnoresAppearance() {
+        let standard = UserDefaults.standard
+        let shared = UserDefaults(suiteName: AppIdentity.appGroupIdentifier)
+        let styleKey = InterfaceStyle.storageKey
+        let appearanceKey = AppAppearance.storageKey
+        let previousStyle = standard.string(forKey: styleKey)
+        let previousSharedStyle = shared?.string(forKey: styleKey)
+        let previousAppearance = standard.string(forKey: appearanceKey)
+        let previousSharedAppearance = shared?.string(forKey: appearanceKey)
+        defer {
+            restore(previousStyle, key: styleKey, defaults: standard)
+            restore(previousAppearance, key: appearanceKey, defaults: standard)
+            if let shared {
+                restore(previousSharedStyle, key: styleKey, defaults: shared)
+                restore(previousSharedAppearance, key: appearanceKey, defaults: shared)
+            }
+        }
+
+        standard.removeObject(forKey: styleKey)
+        shared?.removeObject(forKey: styleKey)
+        XCTAssertNotEqual(styleKey, appearanceKey)
+        XCTAssertEqual(InterfaceStyle.current, .liquidGlass)
+
+        AppAppearance.choose(.dark)
+        XCTAssertEqual(AppAppearance.current, .dark)
+        XCTAssertEqual(InterfaceStyle.current, .liquidGlass)
+
+        InterfaceStyle.choose(.classic)
+        XCTAssertEqual(InterfaceStyle.current, .classic)
+        XCTAssertEqual(shared?.string(forKey: styleKey), InterfaceStyle.classic.rawValue)
+        XCTAssertEqual(AppAppearance.current, .dark)
+    }
+
+    private func restore(_ value: String?, key: String, defaults: UserDefaults) {
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }

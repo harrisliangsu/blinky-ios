@@ -64,6 +64,7 @@ struct SettingsView: View {
                     Image(systemName: systemImage)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.white)
+                        .accessibilityHidden(true)
                         .frame(width: 30, height: 30)
                         .background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     Text(title)

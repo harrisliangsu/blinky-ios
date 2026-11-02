@@ -281,13 +281,7 @@ private struct UsageTabView: View {
                 store.moveAccounts(from: offsets, to: destination)
             }
         }
-        .overlay(alignment: .topLeading) {
-            Text(verbatim: interfaceStyle.rawValue)
-                .font(.system(size: 1))
-                .foregroundStyle(.clear)
-                .accessibilityIdentifier("usage-style-\(interfaceStyle.rawValue)")
-                .accessibilityHidden(false)
-        }
+        .accessibilityIdentifier("usage-style-\(interfaceStyle.rawValue)")
         .listStyle(.insetGrouped)
         .modifier(UsageListSurface(style: interfaceStyle))
         .environment(\.editMode, .constant(editingAccountOrder ? .active : .inactive))
@@ -867,6 +861,7 @@ struct LimitRow: View {
 private struct ScreenTimeHero: View {
     let window: UsageWindow
     @Environment(\.colorScheme) private var colorScheme
+    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 44
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -877,8 +872,9 @@ private struct ScreenTimeHero: View {
                     .textCase(.uppercase)
                     .tracking(0.8)
                     .lineLimit(1)
+                    .accessibilityLabel(window.displayTitle)
                 Text(UsageText.remainingPercent(window.remainingPercent))
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: heroSize, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(tint)
                     .lineLimit(1)
@@ -912,6 +908,7 @@ private struct ScreenTimeCategoryRow: View {
                     .fill(tint)
                     .frame(width: 4)
                     .frame(minHeight: 36)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(window.displayTitle)
