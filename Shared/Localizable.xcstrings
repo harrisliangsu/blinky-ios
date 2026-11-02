@@ -716,7 +716,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "累计总量"
+            "value": "累计"
           }
         }
       }
@@ -748,7 +748,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每天"
+            "value": "每日"
           }
         }
       }
@@ -893,6 +893,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "剩余最少"
+          }
+        }
+      }
+    },
+    "No local transcripts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No local transcripts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有本地记录"
+          }
+        }
+      }
+    },
+    "This iPhone has no agent transcripts to read, so there is no token chart yet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPhone has no agent transcripts to read, so there is no token chart yet."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 iPhone 上没有可读取的代理对话记录，所以这里还没有 Token 图表。"
+          }
+        }
+      }
+    },
+    "Less": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Less"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "少"
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多"
+          }
+        }
+      }
+    },
+    "Overall": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overall"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合计"
+          }
+        }
+      }
+    },
+    "Speed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度"
           }
         }
       }

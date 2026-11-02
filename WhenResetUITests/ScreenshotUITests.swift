@@ -47,7 +47,15 @@ final class ScreenshotUITests: XCTestCase {
             shot(language: language, appearance: appearance, screen: "about", name: "\(name)-08-about")
             shot(language: language, appearance: appearance, screen: "notifications", name: "\(name)-09-notifications")
             shot(language: language, appearance: appearance, screen: "forecasts", name: "\(name)-06-forecasts")
-            shot(language: language, appearance: appearance, screen: "tokenActivity", name: "\(name)-10-token-activity")
+            for style in ["classic", "screenTime", "liquidGlass"] {
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: style,
+                    screen: "tokenActivity",
+                    name: "\(name)-token-\(style)"
+                )
+            }
         }
     }
 
@@ -162,9 +170,10 @@ final class ScreenshotUITests: XCTestCase {
             )
         case "tokenActivity":
             openSettingsModule(app, english: "Token activity", chinese: "Token 活动")
-            let empty = app.staticTexts["No token records on this iPhone yet."]
-            let chineseEmpty = app.staticTexts["这台 iPhone 上还没有 Token 记录。"]
-            XCTAssertTrue(empty.waitForExistence(timeout: 8) || chineseEmpty.waitForExistence(timeout: 4))
+            XCTAssertTrue(app.descendants(matching: .any)["token-activity-daily"].waitForExistence(timeout: 12))
+            XCTAssertTrue(app.descendants(matching: .any)["token-performance"].waitForExistence(timeout: 8))
+            let model = app.staticTexts["gpt-5.4"]
+            XCTAssertTrue(model.waitForExistence(timeout: 4))
         case "reorder":
             let done = app.buttons["Done"]
             let chineseDone = app.buttons["完成"]

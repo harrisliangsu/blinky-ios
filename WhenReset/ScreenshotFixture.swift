@@ -43,6 +43,30 @@ enum ScreenshotLaunch {
         }
     }
 
+    /// A year of weekday-heavy counts and a cache / input / output split.
+    /// Only the screenshot launch uses this. A phone with no transcripts stays empty.
+    static func tokenActivitySample(now: Date = .now, calendar: Calendar = .current) -> (days: [Date: Int], rows: [TokenPerformanceRow]) {
+        let today = calendar.startOfDay(for: now)
+        var days: [Date: Int] = [:]
+        for offset in 0..<360 {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            let weekday = calendar.component(.weekday, from: date)
+            let weekend = weekday == 1 || weekday == 7
+            if offset % 13 == 0 { continue }
+            let wave = (offset * 17) % 40
+            var tokens = (weekend ? 12_000 : 48_000) + wave * 2_200
+            if offset % 23 == 0 { tokens += 220_000 }
+            days[date] = tokens
+        }
+        let rows = [
+            TokenPerformanceRow(name: "Overall", cache: 2_460_000, input: 1_640_000, output: 420_000, tokensPerSecond: 44.6),
+            TokenPerformanceRow(name: "gpt-5.4", cache: 1_380_000, input: 820_000, output: 210_000, tokensPerSecond: 51.4),
+            TokenPerformanceRow(name: "claude-sonnet", cache: 680_000, input: 540_000, output: 140_000, tokensPerSecond: 38.2),
+            TokenPerformanceRow(name: "grok-4", cache: nil, input: 280_000, output: 70_000, tokensPerSecond: 62.0),
+        ]
+        return (days, rows)
+    }
+
     private static func argument(after flag: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: flag), args.indices.contains(index + 1) else { return nil }

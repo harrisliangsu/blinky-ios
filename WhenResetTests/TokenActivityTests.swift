@@ -63,7 +63,20 @@ final class TokenActivityTests: XCTestCase {
             TokenPerformanceRow(name: "gpt", cache: 20, input: 80, output: 30, tokensPerSecond: 42),
             TokenPerformanceRow(name: "other", cache: nil, input: 5, output: nil, tokensPerSecond: nil),
         ])
-        XCTAssertEqual(table?.columns, [.speed, .cache, .input, .output])
+        XCTAssertEqual(table?.columns, [.cache, .input, .output, .speed])
         XCTAssertEqual(table?.rows.map(\.name), ["gpt", "other"])
+    }
+
+    func testScreenshotSampleCoversAYearAndTheTokenSplit() {
+        let sample = ScreenshotLaunch.tokenActivitySample(now: today, calendar: calendar)
+        let activity = TokenActivity.of(days: sample.days, now: today, calendar: calendar)
+        XCTAssertGreaterThan(activity.total, 1_000_000)
+        XCTAssertGreaterThan(activity.activeDays, 200)
+        XCTAssertLessThanOrEqual(activity.columnCount, 53)
+        let table = TokenPerformanceTable.make(sample.rows)
+        XCTAssertEqual(table?.columns, [.cache, .input, .output, .speed])
+        XCTAssertEqual(table?.rows.map(\.name), ["Overall", "gpt-5.4", "claude-sonnet", "grok-4"])
+        XCTAssertNil(sample.rows.last?.cache)
+        XCTAssertNotNil(sample.rows.last?.input)
     }
 }

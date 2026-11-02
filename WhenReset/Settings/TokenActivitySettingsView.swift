@@ -3,8 +3,8 @@ import Observation
 import SwiftUI
 
 /// Token activity, then Performance when a span has a speed or a cache,
-/// input, or output split. iOS does not scan local agent transcripts yet, so
-/// the page is empty until a record source is connected.
+/// input, or output split. With no local transcripts the page explains that
+/// instead of drawing an empty chart. Screenshot launches supply a sample year.
 struct TokenActivitySettingsView: View {
     @State private var chart = TokenActivityChart.default
 
@@ -18,11 +18,24 @@ struct TokenActivitySettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                if activity.isEmpty {
-                    Text("No token records on this iPhone yet.")
-                        .foregroundStyle(.secondary)
-                } else {
+            if activity.isEmpty, performance == nil {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("No local transcripts")
+                            .font(.subheadline.weight(.semibold))
+                        Text("This iPhone has no agent transcripts to read, so there is no token chart yet.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("token-activity-empty")
+                }
+                .blinkySettingsSection()
+            }
+
+            if !activity.isEmpty {
+                Section {
                     Picker("Token activity", selection: $chart) {
                         ForEach(TokenActivityChart.allCases) { mode in
                             Text(mode.title).tag(mode)
@@ -35,19 +48,20 @@ struct TokenActivitySettingsView: View {
                         locale: AppLanguage.current.locale,
                         TokenActivityText.count(activity.total)
                     ))
-                    .font(.footnote)
+                    .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     TokenActivityPlot(activity: activity, chart: chart)
                     if activity.hasPartialCounts {
                         Text("Counts may be incomplete.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("Token activity")
                 }
-            } header: {
-                Text("Token activity")
+                .blinkySettingsSection()
             }
-            .blinkySettingsSection()
 
             if let performance {
                 Section {
@@ -74,35 +88,75 @@ final class TokenRecordStore {
     var hasPartialCounts = false
     var performance: [TokenPerformanceRow] = []
 
-    private init() {}
+    private init() {
+        #if DEBUG
+        guard ScreenshotLaunch.isActive, ScreenshotLaunch.screen == "tokenActivity" else { return }
+        let sample = ScreenshotLaunch.tokenActivitySample()
+        days = sample.days
+        performance = sample.rows
+        #endif
+    }
 }
 
 private enum TokenActivityText {
     static func count(_ value: Int) -> String {
-        value.formatted(.number.grouping(.automatic))
+        let locale = AppLanguage.current.locale
+        let chinese = AppLanguage.current == .chineseSimplified
+        if chinese {
+            if value >= 100_000_000 {
+                return number(Double(value) / 100_000_000, locale: locale) + "亿"
+            }
+            if value >= 10_000 {
+                return number(Double(value) / 10_000, locale: locale) + "万"
+            }
+        } else if value >= 1_000_000_000 {
+            return number(Double(value) / 1_000_000_000, locale: locale) + "B"
+        } else if value >= 1_000_000 {
+            return number(Double(value) / 1_000_000, locale: locale) + "M"
+        } else if value >= 1_000 {
+            return number(Double(value) / 1_000, locale: locale) + "K"
+        }
+        return value.formatted(.number.grouping(.automatic).locale(locale))
+    }
+
+    static func rowTitle(_ name: String) -> String {
+        name == "Overall" ? String.localized("Overall") : name
+    }
+
+    private static func number(_ value: Double, locale: Locale) -> String {
+        value.formatted(.number.precision(.fractionLength(value < 10 ? 1 : 0)).locale(locale))
     }
 }
 
 private struct TokenActivityPlot: View {
     let activity: TokenActivity
     let chart: TokenActivityChart
+    @Environment(\.interfaceStyle) private var interfaceStyle
+
+    private var cellRadius: CGFloat {
+        interfaceStyle == .screenTime ? 1 : 2
+    }
 
     var body: some View {
         switch chart {
         case .daily:
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 2) {
-                    ForEach(activity.weeks) { week in
-                        VStack(spacing: 2) {
-                            ForEach(0..<7, id: \.self) { row in
-                                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                                    .fill(fill(week: week, row: row))
-                                    .frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 8) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 2) {
+                        ForEach(activity.weeks) { week in
+                            VStack(spacing: 2) {
+                                ForEach(0..<7, id: \.self) { row in
+                                    RoundedRectangle(cornerRadius: cellRadius, style: .continuous)
+                                        .fill(fill(week: week, row: row))
+                                        .frame(width: 8, height: 8)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 4)
+                .defaultScrollAnchor(.trailing)
+                legend
             }
             .accessibilityIdentifier("token-activity-daily")
         case .weekly:
@@ -114,13 +168,29 @@ private struct TokenActivityPlot: View {
         }
     }
 
+    private var legend: some View {
+        HStack(spacing: 3) {
+            Text("Less")
+            ForEach(0..<5, id: \.self) { step in
+                RoundedRectangle(cornerRadius: cellRadius, style: .continuous)
+                    .fill(stepColor(step))
+                    .frame(width: 9, height: 9)
+            }
+            Text("More")
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .accessibilityHidden(true)
+    }
+
     private var weeklyBars: some View {
         let peak = max(activity.weeks.map(\.tokens).max() ?? 1, 1)
-        return HStack(alignment: .bottom, spacing: 3) {
+        return HStack(alignment: .bottom, spacing: 2) {
             ForEach(activity.weeks) { week in
-                Capsule()
+                RoundedRectangle(cornerRadius: cellRadius, style: .continuous)
                     .fill(week.tokens > 0 ? Color.accentColor : Color.primary.opacity(0.12))
-                    .frame(width: 6, height: max(4, 72 * CGFloat(week.tokens) / CGFloat(peak)))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: max(3, 72 * CGFloat(week.tokens) / CGFloat(peak)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -150,7 +220,11 @@ private struct TokenActivityPlot: View {
             return Color.primary.opacity(0.06)
         }
         guard let day = week.days[row] else { return .clear }
-        switch activity.step(for: day.tokens) {
+        return stepColor(activity.step(for: day.tokens))
+    }
+
+    private func stepColor(_ step: Int) -> Color {
+        switch step {
         case 0: return Color.primary.opacity(0.12)
         case 1: return Color.accentColor.opacity(0.30)
         case 2: return Color.accentColor.opacity(0.52)
@@ -164,30 +238,28 @@ private struct TokenPerformanceList: View {
     let table: TokenPerformanceTable
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(" ")
-                Spacer()
-                ForEach(table.columns) { column in
-                    Text(column.title)
-                        .frame(width: 64, alignment: .trailing)
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(table.rows) { row in
-                HStack {
-                    Text(row.name).lineLimit(1)
-                    Spacer(minLength: 8)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(TokenActivityText.rowTitle(row.name))
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
                     ForEach(table.columns) { column in
-                        Text(text(row.value(for: column), column: column))
-                            .frame(width: 64, alignment: .trailing)
-                            .foregroundStyle(row.value(for: column) == nil ? .tertiary : .primary)
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(column.title)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 8)
+                            Text(text(row.value(for: column), column: column))
+                                .font(.subheadline.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(row.value(for: column) == nil ? .tertiary : .primary)
+                                .lineLimit(1)
+                        }
                     }
                 }
-                .font(.subheadline.monospacedDigit())
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("token-performance")
     }
 
@@ -195,9 +267,11 @@ private struct TokenPerformanceList: View {
         guard let value else { return "—" }
         switch column {
         case .speed:
-            return value.formatted(.number.precision(.fractionLength(0...1)))
+            let locale = AppLanguage.current.locale
+            let number = value.formatted(.number.precision(.fractionLength(0...1)).locale(locale))
+            return "\(number) \(String.localized("tok/s"))"
         case .cache, .input, .output:
-            return Int(value).formatted(.number.grouping(.automatic))
+            return TokenActivityText.count(Int(value))
         }
     }
 }

@@ -169,19 +169,19 @@ struct TokenPerformanceRow: Equatable, Identifiable, Sendable {
 
 struct TokenPerformanceTable: Equatable, Sendable {
     enum Column: String, CaseIterable, Identifiable, Sendable {
-        case speed
         case cache
         case input
         case output
+        case speed
 
         var id: String { rawValue }
 
         var title: String {
             switch self {
-            case .speed: String.localized("tok/s")
             case .cache: String.localized("Cache")
             case .input: String.localized("Input")
             case .output: String.localized("Output")
+            case .speed: String.localized("Speed")
             }
         }
     }
@@ -202,10 +202,10 @@ struct TokenPerformanceTable: Equatable, Sendable {
 extension TokenPerformanceRow {
     func value(for column: TokenPerformanceTable.Column) -> Double? {
         switch column {
-        case .speed: tokensPerSecond
         case .cache: cache.map(Double.init)
         case .input: input.map(Double.init)
         case .output: output.map(Double.init)
+        case .speed: tokensPerSecond
         }
     }
 }
