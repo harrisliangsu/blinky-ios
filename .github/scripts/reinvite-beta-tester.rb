@@ -501,6 +501,18 @@ internal_groups.each do |group|
   end
 end
 
+if ENV["ENSURE_INTERNAL_MEMBERSHIP"] == "1"
+  add_code, add_body = add_tester_to_group(token, internal.fetch("id"), OLD_TESTER_ID)
+  puts "ENSURE_INTERNAL_ADD HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299) || add_code == 409}"
+  sleep 3
+  members_code, members_body = request_json(:get, "/v1/betaGroups/#{internal.fetch("id")}/betaTesters?limit=20", token)
+  members = members_code == 200 ? members_body.fetch("data").map { |tester| "#{tester.fetch("id")}:#{tester.dig("attributes", "email")}:#{tester.dig("attributes", "state")}" } : []
+  puts "FINAL_INTERNAL_MEMBERS HTTP #{members_code} #{members.inspect}"
+  final_code, final_ids = email_tester_ids(token)
+  puts "FINAL_EMAIL_TESTERS HTTP #{final_code} ids=#{final_ids.inspect}"
+  exit 0
+end
+
 if ENV["CYCLE_INTERNAL"] == "1"
   raise "No App Store Connect user uses Apple ID #{EMAIL}" unless gmail_user
 
