@@ -198,6 +198,10 @@ end
 
 qq_testers = all_testers.select { |tester| qq_email?(tester.dig("attributes", "email")) }
 puts "QQ_TESTERS #{qq_testers.map { |tester| tester.dig("attributes", "email") }.inspect}"
+if ENV["LIST_ONLY"] == "1"
+  puts "LIST_ONLY no changes made"
+  exit 0
+end
 raise "Refusing to continue: ASC still has a qq.com user and this run will not guess which Apple ID to replace" unless qq_users.empty? && invitations.none? { |invitation| qq_email?(invitation.dig("attributes", "email")) }
 
 unless gmail_user
