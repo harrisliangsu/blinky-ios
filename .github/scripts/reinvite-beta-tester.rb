@@ -230,6 +230,18 @@ first_name = "Kong" if first_name.empty?
 last_name = gmail_user.dig("attributes", "lastName").to_s
 last_name = "Yi" if last_name.empty?
 
+if ENV["ENSURE_BLINKY_ONLY"] == "1"
+  blinky = internal_groups.find { |group| group.dig("attributes", "name") == "Blinky Internal" }
+  raise "Blinky Internal group was not found" unless blinky
+
+  add_code, add_body = add_tester_to_group(token, blinky.fetch("id"), OLD_TESTER_ID)
+  puts "ADDED_TO_GROUP name=\"Blinky Internal\" HTTP #{add_code} #{error_text(add_body) unless add_code.between?(200, 299)}"
+  members_code, members_body = request_json(:get, "/v1/betaGroups/#{blinky.fetch("id")}/betaTesters?limit=20", token)
+  members = members_code == 200 ? members_body.fetch("data").map { |tester| tester.fetch("id") } : []
+  puts "BLINKY_MEMBERS HTTP #{members_code} ids=#{members.inspect}"
+  exit 0
+end
+
 delete_code, delete_body = request_json(:delete, "/v1/betaTesters/#{OLD_TESTER_ID}", token)
 puts "DELETE_BETA_TESTER id=#{OLD_TESTER_ID} HTTP #{delete_code} #{error_text(delete_body) unless delete_code.between?(200, 299) || delete_code == 404}"
 raise "DELETE betaTester failed HTTP #{delete_code}" unless delete_code.between?(200, 299) || delete_code == 404
