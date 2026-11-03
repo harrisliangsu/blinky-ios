@@ -147,19 +147,11 @@ private enum TokenActivityText {
     }
 }
 
-private struct ChartWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 private struct TokenActivityPlot: View {
     let activity: TokenActivity
     let chart: TokenActivityChart
     @Environment(\.interfaceStyle) private var interfaceStyle
     @Environment(\.locale) private var locale
-    @State private var width: CGFloat = 0
 
     private let visibleColumns = 26
     private let gutter: CGFloat = 18
@@ -167,10 +159,6 @@ private struct TokenActivityPlot: View {
 
     private var cellRadius: CGFloat {
         interfaceStyle == .screenTime ? 1 : 2
-    }
-
-    private var pitch: CGFloat {
-        max((width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
     }
 
     var body: some View {
@@ -190,39 +178,40 @@ private struct TokenActivityPlot: View {
                     .accessibilityIdentifier("token-activity-cumulative")
             }
         }
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(key: ChartWidthKey.self, value: proxy.size.width)
-            }
-        }
-        .onPreferenceChange(ChartWidthKey.self) { width = $0 }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The scroll view's ideal width is its content, which would collapse the
+    /// grid. A clear row takes the card width, and the overlay reads that width.
     private var daily: some View {
-        let calendar = Calendar.current
-        return HStack(alignment: .top, spacing: gutterGap) {
-            weekdayGutter(calendar: calendar)
-                .frame(width: gutter)
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 2) {
-                    monthLabels(calendar: calendar)
-                        .frame(width: contentWidth, height: 14)
-                    dayCells
-                        .frame(width: contentWidth, height: pitch * 7)
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: 132)
+            .overlay {
+                GeometryReader { proxy in
+                    let pitch = max((proxy.size.width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
+                    let columns = CGFloat(max(activity.weeks.count, 1))
+                    HStack(alignment: .top, spacing: gutterGap) {
+                        weekdayGutter(pitch: pitch)
+                            .frame(width: gutter)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                monthLabels(pitch: pitch)
+                                    .frame(width: pitch * columns, height: 14)
+                                dayCells(pitch: pitch)
+                                    .frame(width: pitch * columns, height: pitch * 7)
+                            }
+                        }
+                        .defaultScrollAnchor(.trailing)
+                        .contentMargins(.horizontal, 0, for: .scrollContent)
+                    }
                 }
             }
-            .defaultScrollAnchor(.trailing)
-            .contentMargins(.horizontal, 0, for: .scrollContent)
-        }
-        .frame(height: 16 + pitch * 7)
     }
 
-    private var contentWidth: CGFloat {
-        pitch * CGFloat(max(activity.weeks.count, 1))
-    }
-
-    private func weekdayGutter(calendar: Calendar) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+    private func weekdayGutter(pitch: CGFloat) -> some View {
+        let calendar = Calendar.current
+        return VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: 14)
             VStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { row in
@@ -243,8 +232,8 @@ private struct TokenActivityPlot: View {
         return date.formatted(.dateTime.weekday(.narrow).locale(locale))
     }
 
-    private func monthLabels(calendar: Calendar) -> some View {
-        let marks = monthMarks(calendar: calendar)
+    private func monthLabels(pitch: CGFloat) -> some View {
+        let marks = monthMarks(calendar: Calendar.current)
         return ZStack(alignment: .topLeading) {
             ForEach(marks, id: \.index) { mark in
                 Text(mark.title)
@@ -276,7 +265,7 @@ private struct TokenActivityPlot: View {
         return Array(kept.reversed())
     }
 
-    private var dayCells: some View {
+    private func dayCells(pitch: CGFloat) -> some View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(activity.weeks) { week in
                 VStack(spacing: 0) {
