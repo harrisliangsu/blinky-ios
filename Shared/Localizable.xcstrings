@@ -7617,6 +7617,22 @@
         }
       }
     },
+    "Forecast": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forecast"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "预测"
+          }
+        }
+      }
+    },
     "Forecasts": {
       "localizations": {
         "en": {

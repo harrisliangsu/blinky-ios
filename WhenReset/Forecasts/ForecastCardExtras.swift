@@ -94,8 +94,8 @@ private struct ForecastLineText: View {
         let ink = ForecastLineInk.style(for: line.tone)
         VStack(alignment: .leading, spacing: 2) {
             Text(line.text)
-                .font(.caption2)
-                .foregroundStyle(color(for: ink).opacity(0.9))
+                .font(ink.weight == .medium ? .caption.weight(.medium) : .caption)
+                .foregroundStyle(color(for: ink))
             if let note = line.note, !note.isEmpty {
                 Text(note)
                     .font(.caption2)
@@ -121,7 +121,7 @@ private struct PredictedResetHeadline: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Predicted reset")
+                Text(localized: "Predicted reset")
                     .font(.caption.weight(.medium))
                 Spacer(minLength: 8)
                 if let countdown = lines.prediction.countdown {
@@ -153,13 +153,15 @@ private struct PredictedResetDetails: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if lines.prediction.isPlaceholder, let trailing = lines.prediction.trailing {
+                Text(localized: "Predicted reset")
+                    .font(.caption.weight(.medium))
                 Text(trailing)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             if let bound = lines.prediction.bound {
                 Text(bound)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
             if let note = lines.prediction.note, !note.isEmpty {
@@ -173,11 +175,11 @@ private struct PredictedResetDetails: View {
                     .foregroundStyle(.secondary)
             }
             if let latest = lines.latest {
-                Text("Last reset")
+                Text(localized: "Last reset")
                     .font(.caption.weight(.medium))
                     .padding(.top, 2)
                 Text(latest.detail)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(latest.relative)
                     .font(.caption2)
@@ -187,10 +189,6 @@ private struct PredictedResetDetails: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-            }
-            Link(destination: CodexResetEndpoint.site) {
-                Label("Codex Resets", systemImage: "arrow.up.right.square")
-                    .font(.caption)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

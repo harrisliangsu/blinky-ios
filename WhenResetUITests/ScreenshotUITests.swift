@@ -39,13 +39,15 @@ final class ScreenshotUITests: XCTestCase {
                 )
             }
             if appearance == "light" {
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "liquidGlass",
-                    screen: "usageExpanded",
-                    name: "\(name)-usage-expanded"
-                )
+                for style in ["liquidGlass", "classic", "screenTime"] {
+                    shot(
+                        language: language,
+                        appearance: appearance,
+                        interfaceStyle: style,
+                        screen: "usageExpanded",
+                        name: "\(name)-usage-expanded-\(style)"
+                    )
+                }
                 shot(
                     language: language,
                     appearance: appearance,
@@ -205,9 +207,17 @@ final class ScreenshotUITests: XCTestCase {
                 .element(boundBy: 0)
             XCTAssertTrue(disclosure.waitForExistence(timeout: 12))
             disclosure.tap()
+            let forecastHeader = language == "zh-Hans" ? "预测" : "Forecast"
+            let bankedHeader = language == "zh-Hans" ? "已存储的重置" : "Banked resets"
             let detail = language == "zh-Hans" ? "按当前速度" : "At the current pace"
-            XCTAssertTrue(app.staticTexts[detail].waitForExistence(timeout: 4)
-                || app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", language == "zh-Hans" ? "用尽" : "pace")).firstMatch.waitForExistence(timeout: 4))
+            XCTAssertTrue(app.staticTexts[forecastHeader].waitForExistence(timeout: 6))
+            XCTAssertTrue(app.staticTexts[bankedHeader].waitForExistence(timeout: 4))
+            XCTAssertTrue(app.descendants(matching: .any)["usage-footer-codex"].waitForExistence(timeout: 4))
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", detail))
+                    .firstMatch
+                    .waitForExistence(timeout: 4)
+            )
         case "usageDanger":
             let exhausted = language == "zh-Hans" ? "剩余 0%" : "0% left"
             var swipes = 0

@@ -624,7 +624,8 @@ struct UsageCard: View {
     }
 }
 
-/// Banked reset and forecast share one chevron. The update time is one caption.
+/// Collapsed: forecast and banked lines, with the update time on the last line.
+/// Expanded: update time, then forecast text, banked credits, and the Codex link.
 private struct UsageFooter: View {
     let snapshot: UsageSnapshot
     @Environment(ForecastSettingsStore.self) private var settingsStore
@@ -664,9 +665,10 @@ private struct UsageFooter: View {
     }
 
     private func footer(at date: Date) -> some View {
-        let title = ForecastCardSnapshot.collapsedTitle(
+        let settings = settingsStore.settings
+        let forecastTitle = ForecastCardSnapshot.collapsedTitle(
             snapshot: snapshot,
-            settings: settingsStore.settings,
+            settings: settings,
             status: codex.display(at: date),
             now: date
         )
@@ -677,14 +679,27 @@ private struct UsageFooter: View {
                 now: date
             )
             : nil
+        let showsCodexLink = settings.showsPredictedReset && snapshot.accountProviderID == .chatGPT
+        let canExpand = forecastTitle != nil || banked != nil || showsCodexLink
         let updated = UpdatedCaption.phrase(since: snapshot.fetchedAt, now: date)
-        return VStack(alignment: .leading, spacing: 6) {
-            if title != nil || banked != nil {
+        return VStack(alignment: .leading, spacing: 12) {
+            if canExpand {
                 Button {
-                    expanded.toggle()
+                    withAnimation(.snappy(duration: 0.2)) {
+                        expanded.toggle()
+                    }
                 } label: {
                     HStack(alignment: .center, spacing: 8) {
-                        UsageFooterLines(forecast: title, banked: banked, updated: updated)
+                        if expanded {
+                            Text(updated)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("usage-updated")
+                        } else {
+                            UsageFooterLines(forecast: forecastTitle, banked: banked, updated: updated)
+                        }
                         Image(systemName: expanded ? "chevron.up" : "chevron.down")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
@@ -692,16 +707,46 @@ private struct UsageFooter: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier(title == nil ? "usage-more-banked" : "forecasts-disclosure")
+                .accessibilityIdentifier("forecasts-disclosure")
                 if expanded {
-                    if showsBanked {
-                        BankedResetDetails(snapshot: snapshot, now: date)
+                    // Plain sentences only. A meter here sat under the real
+                    // 5-hour and weekly bars and read as a third quota.
+                    if forecastTitle != nil {
+                        footerSection("Forecast", identifier: "usage-footer-forecast") {
+                            ForecastCardExtras(snapshot: snapshot)
+                        }
                     }
-                    ForecastCardExtras(snapshot: snapshot)
+                    if showsBanked {
+                        footerSection("Banked resets", identifier: "usage-footer-banked") {
+                            BankedResetDetails(snapshot: snapshot, now: date)
+                        }
+                    }
+                    if showsCodexLink {
+                        Link(destination: CodexResetEndpoint.site) {
+                            Label("Codex Resets", systemImage: "arrow.up.right.square")
+                                .font(.caption)
+                        }
+                        .accessibilityIdentifier("usage-footer-codex")
+                    }
                 }
             } else {
                 updatedCaption(updated)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func footerSection<Content: View>(
+        _ title: String.LocalizationValue,
+        identifier: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(localized: title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier(identifier)
+            content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -837,11 +882,14 @@ private struct BankedResetDetails: View {
     private var count: Int { max(snapshot.availableResetCount, credits.count) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let nearest = snapshot.nextBankedResetCredit(),
-               let remaining = nearest.remainingLifetimeFraction(at: now) {
-                UsageMeter(remainingFraction: remaining)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            Text(BankedResetCopy.collapsedLine(
+                count: count,
+                expiresAt: snapshot.nextBankedResetCredit(after: now)?.expiresAt,
+                now: now
+            ))
+            .font(.caption)
+            .foregroundStyle(.primary)
             ForEach(Array(credits.enumerated()), id: \.element.id) { index, credit in
                 creditRow(index: index, expiry: credit.expiresAt)
             }
@@ -851,20 +899,27 @@ private struct BankedResetDetails: View {
                 }
             }
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func creditRow(index: Int, expiry: Date?) -> some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(String(format: String.localized("Reset #%lld"), locale: AppLanguage.current.locale, Int64(index + 1)))
-            Spacer()
-            if let expiry {
-                Text(expiry, format: .dateTime.year().month(.abbreviated).day().hour().minute().second())
-                    .multilineTextAlignment(.trailing)
-            } else {
-                Text("Expiry unavailable")
+                .font(.caption)
+                .layoutPriority(1)
+            Spacer(minLength: 8)
+            Group {
+                if let expiry {
+                    Text(expiry, format: .dateTime.year().month(.abbreviated).day().hour().minute().second())
+                } else {
+                    Text(localized: "Expiry unavailable")
+                }
             }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.trailing)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
         }
     }
 }
