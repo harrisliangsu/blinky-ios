@@ -339,7 +339,7 @@ final class ForecastLogicTests: XCTestCase {
         let updated = Date(timeIntervalSince1970: 1_000_000)
         XCTAssertEqual(
             UpdatedCaption.phrase(since: updated.addingTimeInterval(-12), now: updated),
-            "12秒前更新"
+            "12 秒前更新"
         )
         useEnglish()
         XCTAssertEqual(
@@ -349,20 +349,45 @@ final class ForecastLogicTests: XCTestCase {
         let expiry = updated.addingTimeInterval(4 * 3_600 + 59 * 60)
         XCTAssertEqual(
             BankedResetCopy.collapsedLine(count: 1, expiresAt: expiry, now: updated),
-            "1 banked reset · expires in 4h 59m"
+            "1 reset card · expires in 4h 59m"
         )
         XCTAssertEqual(
             BankedResetCopy.collapsedLine(count: 2, expiresAt: expiry, now: updated),
-            "2 banked resets · next expires in 4h 59m"
+            "2 reset cards · next expires in 4h 59m"
         )
         useChinese()
         XCTAssertEqual(
             BankedResetCopy.collapsedLine(count: 1, expiresAt: expiry, now: updated),
-            "1 个已存储的重置 · 4 小时 59 分后过期"
+            "重置卡 1 张 · 4 小时 59 分后过期"
         )
         XCTAssertEqual(
             BankedResetCopy.collapsedLine(count: 2, expiresAt: expiry, now: updated),
-            "2 个已存储的重置 · 最近一个 4 小时 59 分后过期"
+            "重置卡 2 张 · 最近一个 4 小时 59 分后过期"
+        )
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let morning = calendar.date(from: DateComponents(timeZone: calendar.timeZone, year: 2026, month: 11, day: 3, hour: 10, minute: 0))!
+        let later = calendar.date(from: DateComponents(timeZone: calendar.timeZone, year: 2026, month: 11, day: 3, hour: 13, minute: 29))!
+        let nextWeek = calendar.date(from: DateComponents(timeZone: calendar.timeZone, year: 2026, month: 11, day: 9, hour: 20, minute: 38))!
+        XCTAssertEqual(
+            QuotaResetClock.subline(until: later, from: morning, calendar: calendar),
+            "3 小时 29 分后重置 · 13:29"
+        )
+        XCTAssertEqual(
+            QuotaResetClock.subline(until: nextWeek, from: morning, calendar: calendar),
+            "6 天 10 小时后重置 · 11月9日 20:38"
+        )
+        XCTAssertEqual(
+            ForecastCopy.format("%@ runs out in ~%@", "每周额度", "3 天"),
+            "每周额度约 3 天后用尽"
+        )
+        XCTAssertEqual(ResetCardCopy.availableText(count: 1), "可用 1 张")
+        useEnglish()
+        XCTAssertEqual(ResetCardCopy.availableText(count: 1), "1 available")
+        XCTAssertTrue(
+            QuotaResetClock.subline(until: later, from: morning, calendar: calendar)
+                .hasPrefix("Resets in 3h 29m · ")
         )
     }
 

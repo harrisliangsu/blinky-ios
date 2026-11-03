@@ -606,10 +606,9 @@ struct UsageCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let balance = snapshot.apiBalance {
+            if snapshot.usageWindows.isEmpty, let balance = snapshot.apiBalance {
                 APIBalanceRow(balance: balance)
-            }
-            if snapshot.usageWindows.isEmpty, snapshot.apiBalance == nil {
+            } else if snapshot.usageWindows.isEmpty {
                 Label("No resettable limits reported", systemImage: "checkmark.circle")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -621,177 +620,6 @@ struct UsageCard: View {
             }
             UsageFooter(snapshot: snapshot)
         }
-    }
-}
-
-/// Collapsed: forecast and banked lines, with the update time on the last line.
-/// Expanded: update time, then forecast text, banked credits, and the Codex link.
-private struct UsageFooter: View {
-    let snapshot: UsageSnapshot
-    @Environment(ForecastSettingsStore.self) private var settingsStore
-    @Environment(CodexResetStore.self) private var codex
-    @State private var expanded = false
-
-    private var showsBanked: Bool {
-        snapshot.availableResetCount > 0 || !snapshot.availableResetCredits.isEmpty
-    }
-
-    private var usageSignature: String {
-        snapshot.usageWindows.map {
-            "\($0.metricID)|\($0.usedPercent)|\($0.resetsAt.timeIntervalSince1970)|\($0.reportsReset)"
-        }.joined(separator: ";")
-    }
-
-    private var pollKey: String {
-        let settings = settingsStore.settings
-        return "\(settings.showsPredictedReset)-\(settings.remindsBeforePredictedReset)-\(snapshot.accountID)"
-    }
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            footer(at: context.date)
-        }
-        .onChange(of: usageSignature, initial: true) { _, _ in
-            guard snapshot.accountProviderID == .chatGPT else { return }
-            codex.noteUsage(snapshot.usageWindows.map(ForecastWindow.init), accountID: snapshot.accountID)
-        }
-        .task(id: pollKey) {
-            guard snapshot.accountProviderID == .chatGPT else { return }
-            let settings = settingsStore.settings
-            guard settings.showsPredictedReset || settings.remindsBeforePredictedReset else { return }
-            codex.wake()
-            await codex.refreshIfDue()
-        }
-    }
-
-    private func footer(at date: Date) -> some View {
-        let settings = settingsStore.settings
-        let forecastTitle = ForecastCardSnapshot.collapsedTitle(
-            snapshot: snapshot,
-            settings: settings,
-            status: codex.display(at: date),
-            now: date
-        )
-        let banked = showsBanked
-            ? BankedResetCopy.collapsedLine(
-                count: max(snapshot.availableResetCount, snapshot.availableResetCredits.count),
-                expiresAt: snapshot.nextBankedResetCredit(after: date)?.expiresAt,
-                now: date
-            )
-            : nil
-        let showsCodexLink = settings.showsPredictedReset && snapshot.accountProviderID == .chatGPT
-        let canExpand = forecastTitle != nil || banked != nil || showsCodexLink
-        let updated = UpdatedCaption.phrase(since: snapshot.fetchedAt, now: date)
-        return VStack(alignment: .leading, spacing: 12) {
-            if canExpand {
-                Button {
-                    withAnimation(.snappy(duration: 0.2)) {
-                        expanded.toggle()
-                    }
-                } label: {
-                    HStack(alignment: .center, spacing: 8) {
-                        if expanded {
-                            Text(updated)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .accessibilityIdentifier("usage-updated")
-                        } else {
-                            UsageFooterLines(forecast: forecastTitle, banked: banked, updated: updated)
-                        }
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("forecasts-disclosure")
-                if expanded {
-                    // Plain sentences only. A meter here sat under the real
-                    // 5-hour and weekly bars and read as a third quota.
-                    if forecastTitle != nil {
-                        footerSection("Forecast", identifier: "usage-footer-forecast") {
-                            ForecastCardExtras(snapshot: snapshot)
-                        }
-                    }
-                    if showsBanked {
-                        footerSection("Banked resets", identifier: "usage-footer-banked") {
-                            BankedResetDetails(snapshot: snapshot, now: date)
-                        }
-                    }
-                    if showsCodexLink {
-                        Link(destination: CodexResetEndpoint.site) {
-                            Label("Codex Resets", systemImage: "arrow.up.right.square")
-                                .font(.caption)
-                        }
-                        .accessibilityIdentifier("usage-footer-codex")
-                    }
-                }
-            } else {
-                updatedCaption(updated)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func footerSection<Content: View>(
-        _ title: String.LocalizationValue,
-        identifier: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(localized: title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier(identifier)
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func updatedCaption(_ updated: String) -> some View {
-        Text(updated)
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
-            .lineLimit(1)
-            .accessibilityIdentifier("usage-updated")
-    }
-}
-
-/// Forecast, then banked reset. Updated sits on the last of those lines.
-private struct UsageFooterLines: View {
-    var forecast: String?
-    var banked: String?
-    var updated: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let forecast, banked != nil {
-                line(forecast)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if let text = banked ?? forecast {
-                    line(text)
-                }
-                Spacer(minLength: 8)
-                Text(updated)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                    .accessibilityIdentifier("usage-updated")
-            }
-        }
-    }
-
-    private func line(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -874,56 +702,6 @@ struct APIBalanceRow: View {
     }
 }
 
-private struct BankedResetDetails: View {
-    let snapshot: UsageSnapshot
-    var now: Date
-
-    private var credits: [ResetCredit] { snapshot.availableResetCredits }
-    private var count: Int { max(snapshot.availableResetCount, credits.count) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(BankedResetCopy.collapsedLine(
-                count: count,
-                expiresAt: snapshot.nextBankedResetCredit(after: now)?.expiresAt,
-                now: now
-            ))
-            .font(.caption)
-            .foregroundStyle(.primary)
-            ForEach(Array(credits.enumerated()), id: \.element.id) { index, credit in
-                creditRow(index: index, expiry: credit.expiresAt)
-            }
-            if count > credits.count {
-                ForEach(credits.count..<count, id: \.self) { index in
-                    creditRow(index: index, expiry: nil)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func creditRow(index: Int, expiry: Date?) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(String(format: String.localized("Reset #%lld"), locale: AppLanguage.current.locale, Int64(index + 1)))
-                .font(.caption)
-                .layoutPriority(1)
-            Spacer(minLength: 8)
-            Group {
-                if let expiry {
-                    Text(expiry, format: .dateTime.year().month(.abbreviated).day().hour().minute().second())
-                } else {
-                    Text(localized: "Expiry unavailable")
-                }
-            }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.trailing)
-            .lineLimit(2)
-            .minimumScaleFactor(0.85)
-        }
-    }
-}
-
 struct LimitRow: View {
     let window: UsageWindow
     @Environment(\.colorScheme) private var colorScheme
@@ -945,10 +723,12 @@ struct LimitRow: View {
                         .lineLimit(1)
                 }
                 if window.showsCountdown {
-                    Text(CountdownDisplay.resetsInPhrase(until: window.resetsAt, from: context.date))
+                    Text(QuotaResetClock.subline(until: window.resetsAt, from: context.date))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .monospacedDigit()
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 UsageMeter(
                     remainingFraction: window.remainingPercent / 100,

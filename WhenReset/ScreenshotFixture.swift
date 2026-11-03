@@ -23,6 +23,29 @@ enum ScreenshotLaunch {
     }
 
     /// Forces a light or dark interface and the continuous bar so captures stay deterministic.
+    /// A fixed Codex Resets reading so the expanded card can show the prediction
+    /// and the last announcement without calling the network.
+    static func installCodexFixture(now: Date = .now) {
+        guard isActive else { return }
+        CodexResetStore.shared.useScreenshotFixture(CodexResetStatus(
+            scheduled: nil,
+            watch: CodexResetStatus.Watch(
+                level: "elevated",
+                chancePercent: 40,
+                forecastWindow: "this week",
+                windowEnds: now.addingTimeInterval(21 * 3_600),
+                text: nil,
+                resetType: "regular"
+            ),
+            latest: CodexResetStatus.Latest(
+                id: "screenshot-latest",
+                resetType: "regular",
+                announcedAt: now.addingTimeInterval(-2 * 86_400),
+                text: nil
+            )
+        ))
+    }
+
     static func applyChrome() {
         guard isActive else { return }
         switch argument(after: "-BlinkyScreenshotAppearance") {
@@ -156,7 +179,7 @@ enum ScreenshotFixture {
                         id: "banked-\(index)",
                         expiresAt: now.addingTimeInterval(5 * 3_600),
                         status: "available",
-                        grantedAt: now.addingTimeInterval(-86_400)
+                        grantedAt: now.addingTimeInterval(-3 * 3_600)
                     )
                 ]
             }

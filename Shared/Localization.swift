@@ -79,7 +79,7 @@ extension Text {
 }
 
 enum UpdatedCaption {
-    /// One caption: "Updated 12s ago" / "12秒前更新".
+    /// One caption: "Updated 12s ago" / "12 秒前更新".
     static func phrase(since date: Date, now: Date = .now) -> String {
         let seconds = max(0, Int(now.timeIntervalSince(date).rounded(.down)))
         let locale = AppLanguage.current.locale
@@ -110,7 +110,7 @@ enum BankedResetCopy {
         return "\(name) · \(when)"
     }
 
-    private static func expiresPhrase(until expiry: Date, from now: Date, soonestOfMany: Bool) -> String {
+    static func expiresPhrase(until expiry: Date, from now: Date, soonestOfMany: Bool) -> String {
         let remaining = max(0, Int(expiry.timeIntervalSince(now).rounded(.down)))
         let locale = AppLanguage.current.locale
         let days = remaining / 86_400

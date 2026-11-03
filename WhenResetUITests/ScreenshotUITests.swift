@@ -9,58 +9,46 @@ final class ScreenshotUITests: XCTestCase {
         capture(language: "zh-Hans", prefix: "zh-Hans")
     }
 
-    /// The review set for this pass: usage tiers, one expanded card, one
-    /// exhausted card, and the token daily page. The full matrix is what made
-    /// the screenshot job die mid-capture.
+    /// Collapsed and expanded usage in both languages, both appearances, and
+    /// all three styles, plus a low-remaining card. Token activity stays on
+    /// its own screen and is not part of this pass.
     private func capture(language: String, prefix: String) {
         for appearance in ["light", "dark"] {
-            let name = "\(prefix)-\(appearance)"
+            for style in ["liquidGlass", "classic", "screenTime"] {
+                let name = "\(prefix)-\(appearance)-\(style)"
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: style,
+                    screen: "usage",
+                    name: "\(name)-usage"
+                )
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: style,
+                    screen: "usageExpanded",
+                    name: "\(name)-usage-expanded"
+                )
+            }
+        }
+        for appearance in ["light", "dark"] {
             shot(
                 language: language,
                 appearance: appearance,
                 interfaceStyle: "liquidGlass",
-                screen: "usage",
-                name: "\(name)-liquidGlass-usage"
+                screen: "usageDanger",
+                name: "\(prefix)-\(appearance)-liquidGlass-usage-danger"
             )
-            if language == "zh-Hans", appearance == "light" {
+        }
+        if language == "zh-Hans" {
+            for style in ["classic", "screenTime"] {
                 shot(
                     language: language,
-                    appearance: appearance,
-                    interfaceStyle: "classic",
-                    screen: "usage",
-                    name: "\(name)-classic-usage"
-                )
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "screenTime",
-                    screen: "usage",
-                    name: "\(name)-screenTime-usage"
-                )
-            }
-            if appearance == "light" {
-                for style in ["liquidGlass", "classic", "screenTime"] {
-                    shot(
-                        language: language,
-                        appearance: appearance,
-                        interfaceStyle: style,
-                        screen: "usageExpanded",
-                        name: "\(name)-usage-expanded-\(style)"
-                    )
-                }
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "liquidGlass",
+                    appearance: "light",
+                    interfaceStyle: style,
                     screen: "usageDanger",
-                    name: "\(name)-usage-danger"
-                )
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "liquidGlass",
-                    screen: "tokenActivity",
-                    name: "\(name)-token-liquidGlass"
+                    name: "\(prefix)-light-\(style)-usage-danger"
                 )
             }
         }
@@ -207,17 +195,27 @@ final class ScreenshotUITests: XCTestCase {
                 .element(boundBy: 0)
             XCTAssertTrue(disclosure.waitForExistence(timeout: 12))
             disclosure.tap()
-            let forecastHeader = language == "zh-Hans" ? "预测" : "Forecast"
-            let bankedHeader = language == "zh-Hans" ? "已存储的重置" : "Banked resets"
-            let detail = language == "zh-Hans" ? "按当前速度" : "At the current pace"
-            XCTAssertTrue(app.staticTexts[forecastHeader].waitForExistence(timeout: 6))
-            XCTAssertTrue(app.staticTexts[bankedHeader].waitForExistence(timeout: 4))
-            XCTAssertTrue(app.descendants(matching: .any)["usage-footer-codex"].waitForExistence(timeout: 4))
+            let forecastHeader = language == "zh-Hans" ? "用尽预测" : "Exhaustion forecast"
+            let resetHeader = language == "zh-Hans" ? "重置卡" : "Reset cards"
+            let pace = language == "zh-Hans" ? "早于重置" : "Before reset"
             XCTAssertTrue(
-                app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", detail))
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", forecastHeader))
+                    .firstMatch
+                    .waitForExistence(timeout: 6)
+            )
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", resetHeader))
                     .firstMatch
                     .waitForExistence(timeout: 4)
             )
+            XCTAssertTrue(app.descendants(matching: .any)["usage-footer-codex"].waitForExistence(timeout: 4))
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", pace))
+                    .firstMatch
+                    .waitForExistence(timeout: 4)
+            )
+            XCTAssertFalse(app.staticTexts["估算价值"].exists)
+            XCTAssertFalse(app.staticTexts["Estimated value"].exists)
         case "usageDanger":
             let exhausted = language == "zh-Hans" ? "剩余 0%" : "0% left"
             var swipes = 0
