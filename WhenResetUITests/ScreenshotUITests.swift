@@ -241,7 +241,9 @@ final class ScreenshotUITests: XCTestCase {
             }
             XCTAssertTrue(missingCache.waitForExistence(timeout: 8))
         case "usageExpanded":
-            let disclosure = app.descendants(matching: .any)["forecasts-disclosure"]
+            let disclosure = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", "forecasts-disclosure"))
+                .element(boundBy: 0)
             XCTAssertTrue(disclosure.waitForExistence(timeout: 12))
             disclosure.tap()
             let detail = language == "zh-Hans" ? "按当前速度" : "At the current pace"
