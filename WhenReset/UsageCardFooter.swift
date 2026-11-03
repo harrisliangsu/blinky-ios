@@ -443,7 +443,7 @@ private struct DetailRow: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .multilineTextAlignment(alignment == .trailing ? .trailing : .leading)
-                .lineLimit(2)
+                .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
             }
         }

@@ -7637,7 +7637,7 @@
     },
     "%@ runs out in ~%@": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "%@ runs out in ~%@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%@ out in ~%@" } },
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "%@约 %@后用尽" } }
       }
     },

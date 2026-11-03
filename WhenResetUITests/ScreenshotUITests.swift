@@ -70,6 +70,7 @@ final class ScreenshotUITests: XCTestCase {
             "-BlinkyScreenshotScreen", screen,
         ]
         app.launch()
+        dismissSystemAlerts(app)
 
         switch screen {
         case "addAccount":
@@ -236,11 +237,43 @@ final class ScreenshotUITests: XCTestCase {
         }
 
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        dismissSystemAlerts(app)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
         app.terminate()
+    }
+
+    /// The simulator sometimes asks for an Apple Account. That sheet covers the card.
+    private func dismissSystemAlerts(_ app: XCUIApplication) {
+        let monitor = addUIInterruptionMonitor(withDescription: "System alert") { alert in
+            for label in ["Not Now", "以后", "Cancel", "取消", "Don't Allow", "不允许"] {
+                if alert.buttons[label].exists {
+                    alert.buttons[label].tap()
+                    return true
+                }
+            }
+            return false
+        }
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        var dismissed = false
+        for label in ["Not Now", "以后", "Cancel", "取消"] {
+            let systemButton = springboard.buttons[label]
+            if systemButton.exists {
+                systemButton.tap()
+                dismissed = true
+            }
+            let appButton = app.buttons[label]
+            if appButton.exists {
+                appButton.tap()
+                dismissed = true
+            }
+        }
+        if !dismissed && (springboard.alerts.firstMatch.exists || app.alerts.firstMatch.exists) {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        }
+        removeUIInterruptionMonitor(monitor)
     }
 
     private func openIdentifier(_ app: XCUIApplication, _ identifier: String) {
