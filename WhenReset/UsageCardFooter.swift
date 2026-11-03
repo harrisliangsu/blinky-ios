@@ -387,11 +387,18 @@ private struct DetailRow: View {
     var identifier: String?
 
     @Environment(\.interfaceStyle) private var interfaceStyle
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            sideBySide
-            stacked
+        // ViewThatFits uses each child's ideal width. A long detail line
+        // is wider than the card, so it picked the stacked layout and put
+        // the label and the time on the left. Accessibility sizes still stack.
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                stacked
+            } else {
+                sideBySide
+            }
         }
         .accessibilityElement(children: .combine)
     }
