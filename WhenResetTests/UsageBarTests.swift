@@ -42,6 +42,23 @@ final class UsageBarTests: XCTestCase {
         XCTAssertEqual(UsageBarStyle.current, .continuous)
     }
 
+    func testRemainingColorUsesThreeTiers() {
+        let light = ColorScheme.light
+        let comfortable = UsageMeterTint.color(remainingFraction: 0.85, colorScheme: light)
+        let warning = UsageMeterTint.color(remainingFraction: 0.20, colorScheme: light)
+        let danger = UsageMeterTint.color(remainingFraction: 0, colorScheme: light)
+        XCTAssertNotEqual(comfortable, warning)
+        XCTAssertNotEqual(warning, danger)
+        XCTAssertEqual(
+            UsageMeterTint.color(remainingFraction: 0.25, colorScheme: light),
+            warning
+        )
+        XCTAssertEqual(
+            UsageMeterTint.color(remainingFraction: 0.26, colorScheme: light),
+            comfortable
+        )
+    }
+
     func testInterfaceStylesUseDifferentContinuousMeters() {
         let classic = InterfaceStyle.classic.continuousMeter(prominent: true)
         let screenTime = InterfaceStyle.screenTime.continuousMeter(prominent: true)

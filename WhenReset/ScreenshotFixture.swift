@@ -127,9 +127,10 @@ enum ScreenshotFixture {
         let samples: [(ProviderID, String, String, Double, Double, Bool)] = [
             // Remaining percents are intentionally not sorted. Widgets must
             // keep this custom order instead of lining up lowest-remaining first.
+            // Three remaining tiers, in custom order: comfortable, warning (≤25%), exhausted.
             (.chatGPT, "Kong Yi", "Pro", 15, 25, true),
-            (.chatGPT, "Work", "Plus", 10, 55, true),
-            (.grok, "Grok", "Heavy", 78, 42, false),
+            (.chatGPT, "Work", "Plus", 80, 78, true),
+            (.grok, "Grok", "Heavy", 100, 42, false),
             (.kimi, "Kimi Code", "Plus", 0, 8, false),
             (.zai, "z.ai", "Pro", 40, 33, false),
             (.zhipu, "智谱", "Max", 26, 41, false),

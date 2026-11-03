@@ -61,6 +61,20 @@ final class ScreenshotUITests: XCTestCase {
                     language: language,
                     appearance: appearance,
                     interfaceStyle: "liquidGlass",
+                    screen: "usageExpanded",
+                    name: "\(name)-usage-expanded"
+                )
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: "liquidGlass",
+                    screen: "usageDanger",
+                    name: "\(name)-usage-danger"
+                )
+                shot(
+                    language: language,
+                    appearance: appearance,
+                    interfaceStyle: "liquidGlass",
                     screen: "tokenActivityWeekly",
                     name: "\(name)-token-weekly"
                 )
@@ -226,6 +240,21 @@ final class ScreenshotUITests: XCTestCase {
                 swipes += 1
             }
             XCTAssertTrue(missingCache.waitForExistence(timeout: 8))
+        case "usageExpanded":
+            let disclosure = app.descendants(matching: .any)["forecasts-disclosure"]
+            XCTAssertTrue(disclosure.waitForExistence(timeout: 12))
+            disclosure.tap()
+            let detail = language == "zh-Hans" ? "按当前速度" : "At the current pace"
+            XCTAssertTrue(app.staticTexts[detail].waitForExistence(timeout: 4)
+                || app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", language == "zh-Hans" ? "用尽" : "pace")).firstMatch.waitForExistence(timeout: 4))
+        case "usageDanger":
+            let exhausted = language == "zh-Hans" ? "剩余 0%" : "0% left"
+            var swipes = 0
+            while !app.staticTexts[exhausted].isHittable && swipes < 4 {
+                app.swipeUp()
+                swipes += 1
+            }
+            XCTAssertTrue(app.staticTexts[exhausted].waitForExistence(timeout: 8))
         case "reorder":
             let done = app.buttons["Done"]
             let chineseDone = app.buttons["完成"]

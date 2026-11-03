@@ -75,6 +75,7 @@ struct TokenActivitySettingsView: View {
                         }
                     }
                 }
+                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
                 .listRowSeparator(.hidden)
                 .blinkySettingsSection()
 
@@ -148,6 +149,29 @@ private enum TokenActivityText {
     }
 }
 
+private struct HeatmapWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct HeatmapWidth<Content: View>: View {
+    @ViewBuilder var content: (CGFloat) -> Content
+    @State private var width: CGFloat = 0
+
+    var body: some View {
+        content(width)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: HeatmapWidthKey.self, value: proxy.size.width)
+                }
+            }
+            .onPreferenceChange(HeatmapWidthKey.self) { width = $0 }
+    }
+}
+
 private struct HeatmapOffsetKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
@@ -175,7 +199,7 @@ private struct TokenActivityPlot: View {
         Group {
             switch chart {
             case .daily:
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 14) {
                     daily
                     legend
                 }
@@ -194,21 +218,18 @@ private struct TokenActivityPlot: View {
     /// The scroll view's ideal width is its content, which would collapse the
     /// grid. A clear row takes the card width, and the overlay reads that width.
     private var daily: some View {
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .frame(height: 132)
-            .overlay {
-                GeometryReader { proxy in
-                    let pitch = max((proxy.size.width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
-                    let columns = CGFloat(max(activity.weeks.count, 1))
-                    HStack(alignment: .top, spacing: gutterGap) {
+        HeatmapWidth { width in
+            let pitch = max((width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
+            let columns = CGFloat(max(activity.weeks.count, 1))
+            let gridHeight = 14 + 2 + pitch * 7
+            HStack(alignment: .top, spacing: gutterGap) {
                         weekdayGutter(pitch: pitch)
                             .frame(width: gutter)
                         VStack(alignment: .leading, spacing: 2) {
                             monthLabelBar(
                                 pitch: pitch,
                                 contentWidth: pitch * columns,
-                                viewportWidth: max(proxy.size.width - gutter - gutterGap, 1)
+                                viewportWidth: max(width - gutter - gutterGap, 1)
                             )
                             .frame(height: 14)
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -226,14 +247,31 @@ private struct TokenActivityPlot: View {
                             .coordinateSpace(name: "tokenHeatmap")
                             .defaultScrollAnchor(.trailing)
                             .contentMargins(.horizontal, 0, for: .scrollContent)
+                            .mask { heatmapMask }
                             .onPreferenceChange(HeatmapOffsetKey.self) { value in
                                 heatmapOffset = value
                                 if value != 0 { didMeasureHeatmap = true }
                             }
                         }
                     }
+                    .frame(height: gridHeight, alignment: .top)
                 }
+    }
+
+    /// Older weeks sit off the left edge. A short fade says the row continues that way.
+    private var heatmapMask: some View {
+        let showOlder = !didMeasureHeatmap || heatmapOffset < -1
+        return HStack(spacing: 0) {
+            if showOlder {
+                LinearGradient(
+                    colors: [.clear, .black],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 18)
             }
+            Rectangle().fill(.black)
+        }
     }
 
     private func weekdayGutter(pitch: CGFloat) -> some View {
@@ -467,8 +505,33 @@ private struct TokenPerformanceCard: View {
         HStack(alignment: .top, spacing: 8) {
             figure(TokenActivityText.count(summary.total), caption: "Total tokens")
             figure(summary.cacheHit.map(TokenActivityText.percent) ?? "—", caption: "Cache hit")
-            figure(summary.averageSpeed.map(TokenActivityText.speed) ?? "—", caption: "Avg speed")
+            speedFigure(summary.averageSpeed)
         }
+    }
+
+    private func speedFigure(_ value: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let value {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(TokenActivityText.speed(value))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("tok/s")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            } else {
+                Text("—")
+                    .font(.title3.weight(.semibold))
+            }
+            Text("Avg speed")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func figure(_ value: String, caption: LocalizedStringKey) -> some View {
