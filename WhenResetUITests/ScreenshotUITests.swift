@@ -9,51 +9,33 @@ final class ScreenshotUITests: XCTestCase {
         capture(language: "zh-Hans", prefix: "zh-Hans")
     }
 
+    /// The review set for this pass: usage tiers, one expanded card, one
+    /// exhausted card, and the token daily page. The full matrix is what made
+    /// the screenshot job die mid-capture.
     private func capture(language: String, prefix: String) {
         for appearance in ["light", "dark"] {
             let name = "\(prefix)-\(appearance)"
-            for style in ["classic", "screenTime", "liquidGlass"] {
+            shot(
+                language: language,
+                appearance: appearance,
+                interfaceStyle: "liquidGlass",
+                screen: "usage",
+                name: "\(name)-liquidGlass-usage"
+            )
+            if language == "zh-Hans", appearance == "light" {
                 shot(
                     language: language,
                     appearance: appearance,
-                    interfaceStyle: style,
+                    interfaceStyle: "classic",
                     screen: "usage",
-                    name: "\(name)-\(style)-usage"
+                    name: "\(name)-classic-usage"
                 )
-            }
-            shot(language: language, appearance: appearance, screen: "reorder", name: "\(name)-02-usage-reorder")
-            shot(language: language, appearance: appearance, screen: "addAccount", name: "\(name)-03-add-account")
-            shot(language: language, appearance: appearance, screen: "deviceCode", name: "\(name)-04-device-code")
-            shot(language: language, appearance: appearance, screen: "settings", name: "\(name)-05-settings")
-            shot(language: language, appearance: appearance, screen: "settingsRoot", name: "\(name)-07-settings-root")
-            for style in ["classic", "screenTime", "liquidGlass"] {
                 shot(
                     language: language,
                     appearance: appearance,
-                    interfaceStyle: style,
-                    screen: "settingsRoot",
-                    name: "\(name)-settings-\(style)"
-                )
-                if appearance == "light" {
-                    shot(
-                        language: language,
-                        appearance: appearance,
-                        interfaceStyle: style,
-                        screen: "settings",
-                        name: "\(name)-appearance-\(style)"
-                    )
-                }
-            }
-            shot(language: language, appearance: appearance, screen: "about", name: "\(name)-08-about")
-            shot(language: language, appearance: appearance, screen: "notifications", name: "\(name)-09-notifications")
-            shot(language: language, appearance: appearance, screen: "forecasts", name: "\(name)-06-forecasts")
-            for style in ["classic", "screenTime", "liquidGlass"] {
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: style,
-                    screen: "tokenActivity",
-                    name: "\(name)-token-\(style)"
+                    interfaceStyle: "screenTime",
+                    screen: "usage",
+                    name: "\(name)-screenTime-usage"
                 )
             }
             if appearance == "light" {
@@ -75,32 +57,9 @@ final class ScreenshotUITests: XCTestCase {
                     language: language,
                     appearance: appearance,
                     interfaceStyle: "liquidGlass",
-                    screen: "tokenActivityWeekly",
-                    name: "\(name)-token-weekly"
+                    screen: "tokenActivity",
+                    name: "\(name)-token-liquidGlass"
                 )
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "liquidGlass",
-                    screen: "tokenActivityCumulative",
-                    name: "\(name)-token-cumulative"
-                )
-                shot(
-                    language: language,
-                    appearance: appearance,
-                    interfaceStyle: "liquidGlass",
-                    screen: "tokenActivityEmpty",
-                    name: "\(name)-token-empty"
-                )
-                if language == "en" {
-                    shot(
-                        language: language,
-                        appearance: appearance,
-                        interfaceStyle: "liquidGlass",
-                        screen: "tokenActivityExpanded",
-                        name: "\(name)-token-expanded"
-                    )
-                }
             }
         }
     }
