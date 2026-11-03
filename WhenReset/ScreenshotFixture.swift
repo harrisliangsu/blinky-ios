@@ -25,6 +25,7 @@ enum ScreenshotLaunch {
     /// Forces a light or dark interface and the continuous bar so captures stay deterministic.
     /// A fixed Codex Resets reading so the expanded card can show the prediction
     /// and the last announcement without calling the network.
+    @MainActor
     static func installCodexFixture(now: Date = .now) {
         guard isActive else { return }
         CodexResetStore.shared.useScreenshotFixture(CodexResetStatus(
