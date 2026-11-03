@@ -1,6 +1,7 @@
 #if os(iOS)
 import Observation
 import SwiftUI
+import UIKit
 
 /// Token activity, then performance for a chosen span. With no local transcripts
 /// the page explains that instead of drawing an empty chart. Screenshot launches
@@ -147,11 +148,20 @@ private enum TokenActivityText {
     }
 }
 
+private struct HeatmapOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 private struct TokenActivityPlot: View {
     let activity: TokenActivity
     let chart: TokenActivityChart
     @Environment(\.interfaceStyle) private var interfaceStyle
     @Environment(\.locale) private var locale
+    @State private var heatmapOffset: CGFloat = 0
+    @State private var didMeasureHeatmap = false
 
     private let visibleColumns = 26
     private let gutter: CGFloat = 18
@@ -194,16 +204,33 @@ private struct TokenActivityPlot: View {
                     HStack(alignment: .top, spacing: gutterGap) {
                         weekdayGutter(pitch: pitch)
                             .frame(width: gutter)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                monthLabels(pitch: pitch)
-                                    .frame(width: pitch * columns, height: 14)
+                        VStack(alignment: .leading, spacing: 2) {
+                            monthLabelBar(
+                                pitch: pitch,
+                                contentWidth: pitch * columns,
+                                viewportWidth: max(proxy.size.width - gutter - gutterGap, 1)
+                            )
+                            .frame(height: 14)
+                            ScrollView(.horizontal, showsIndicators: false) {
                                 dayCells(pitch: pitch)
                                     .frame(width: pitch * columns, height: pitch * 7)
+                                    .background {
+                                        GeometryReader { geo in
+                                            Color.clear.preference(
+                                                key: HeatmapOffsetKey.self,
+                                                value: geo.frame(in: .named("tokenHeatmap")).minX
+                                            )
+                                        }
+                                    }
+                            }
+                            .coordinateSpace(name: "tokenHeatmap")
+                            .defaultScrollAnchor(.trailing)
+                            .contentMargins(.horizontal, 0, for: .scrollContent)
+                            .onPreferenceChange(HeatmapOffsetKey.self) { value in
+                                heatmapOffset = value
+                                if value != 0 { didMeasureHeatmap = true }
                             }
                         }
-                        .defaultScrollAnchor(.trailing)
-                        .contentMargins(.horizontal, 0, for: .scrollContent)
                     }
                 }
             }
@@ -227,22 +254,73 @@ private struct TokenActivityPlot: View {
     private func weekdayLabel(row: Int, calendar: Calendar) -> String {
         guard let start = activity.weeks.first?.start,
               let date = calendar.date(byAdding: .day, value: row, to: start) else { return "" }
-        let weekday = calendar.component(.weekday, from: date)
-        guard weekday == 2 || weekday == 4 || weekday == 6 else { return "" }
-        return date.formatted(.dateTime.weekday(.narrow).locale(locale))
+        switch calendar.component(.weekday, from: date) {
+        case 2: return chineseWeekdays ? "一" : "M"
+        case 4: return chineseWeekdays ? "三" : "W"
+        case 6: return chineseWeekdays ? "五" : "F"
+        default: return ""
+        }
     }
 
-    private func monthLabels(pitch: CGFloat) -> some View {
-        let marks = monthMarks(calendar: Calendar.current)
+    /// `.weekday(.narrow)` is "1/3/5" in zh-Hans. These marks match M/W/F.
+    private var chineseWeekdays: Bool {
+        if AppLanguage.current == .chineseSimplified { return true }
+        return locale.language.languageCode?.identifier.hasPrefix("zh") == true
+    }
+
+    private func monthLabelBar(pitch: CGFloat, contentWidth: CGFloat, viewportWidth: CGFloat) -> some View {
+        let trailing = max(contentWidth - viewportWidth, 0)
+        let visibleOrigin = didMeasureHeatmap
+            ? min(max(-heatmapOffset, 0), trailing)
+            : trailing
+        let marks = placedMonthLabels(
+            pitch: pitch,
+            contentWidth: contentWidth,
+            visibleOrigin: visibleOrigin,
+            viewportWidth: viewportWidth
+        )
         return ZStack(alignment: .topLeading) {
             ForEach(marks, id: \.index) { mark in
                 Text(mark.title)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize()
-                    .offset(x: pitch * CGFloat(mark.index))
+                    .offset(x: mark.x)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
+    }
+
+    /// Labels sit in the viewport, not in the scrolling cells, so a name is
+    /// either fully inside the card or not drawn. The last name is pulled
+    /// left rather than clipped to "Ma".
+    private func placedMonthLabels(
+        pitch: CGFloat,
+        contentWidth: CGFloat,
+        visibleOrigin: CGFloat,
+        viewportWidth: CGFloat
+    ) -> [(index: Int, title: String, x: CGFloat)] {
+        let candidates = monthMarks(calendar: Calendar.current)
+        var placed: [(index: Int, title: String, x: CGFloat)] = []
+        for mark in candidates.reversed() {
+            let width = monthLabelWidth(mark.title)
+            let natural = pitch * CGFloat(mark.index)
+            let contentX = min(natural, max(contentWidth - width, 0))
+            var viewX = contentX - visibleOrigin
+            if viewX + width > viewportWidth {
+                viewX = viewportWidth - width
+            }
+            guard viewX >= 0, viewX + width <= viewportWidth + 0.5 else { continue }
+            if let next = placed.last, viewX + width + 4 > next.x { continue }
+            placed.append((mark.index, mark.title, viewX))
+        }
+        return Array(placed.reversed())
+    }
+
+    private func monthLabelWidth(_ title: String) -> CGFloat {
+        let font = UIFont.systemFont(ofSize: 11)
+        return ceil((title as NSString).size(withAttributes: [.font: font]).width) + 1
     }
 
     private func monthMarks(calendar: Calendar) -> [(index: Int, title: String)] {
@@ -352,7 +430,14 @@ private struct TokenActivityPlot: View {
 private struct TokenPerformanceCard: View {
     let summary: TokenSpanSummary
     @Binding var span: TokenPerformanceSpan
-    @State private var expanded: Set<String> = []
+    @State private var expanded: Set<String> = {
+        #if DEBUG
+        if ScreenshotLaunch.isActive, ScreenshotLaunch.screen == "tokenActivityExpanded" {
+            return ["grok-4"]
+        }
+        #endif
+        return []
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

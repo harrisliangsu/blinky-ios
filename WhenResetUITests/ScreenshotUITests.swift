@@ -78,6 +78,15 @@ final class ScreenshotUITests: XCTestCase {
                     screen: "tokenActivityEmpty",
                     name: "\(name)-token-empty"
                 )
+                if language == "en" {
+                    shot(
+                        language: language,
+                        appearance: appearance,
+                        interfaceStyle: "liquidGlass",
+                        screen: "tokenActivityExpanded",
+                        name: "\(name)-token-expanded"
+                    )
+                }
             }
         }
     }
@@ -208,6 +217,15 @@ final class ScreenshotUITests: XCTestCase {
             let empty = app.staticTexts["No local transcripts"]
             let chineseEmpty = app.staticTexts["没有本地记录"]
             XCTAssertTrue(empty.exists || chineseEmpty.exists)
+        case "tokenActivityExpanded":
+            openTokenActivity(app)
+            let missingCache = app.staticTexts["—"]
+            var swipes = 0
+            while !missingCache.isHittable && swipes < 5 {
+                app.swipeUp()
+                swipes += 1
+            }
+            XCTAssertTrue(missingCache.waitForExistence(timeout: 8))
         case "reorder":
             let done = app.buttons["Done"]
             let chineseDone = app.buttons["完成"]

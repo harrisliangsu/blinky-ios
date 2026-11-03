@@ -53,7 +53,7 @@ enum ScreenshotLaunch {
 
     static var seedsTokenActivity: Bool {
         switch screen {
-        case "tokenActivity", "tokenActivityWeekly", "tokenActivityCumulative": true
+        case "tokenActivity", "tokenActivityWeekly", "tokenActivityCumulative", "tokenActivityExpanded": true
         default: false
         }
     }
