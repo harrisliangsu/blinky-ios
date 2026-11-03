@@ -7623,6 +7623,12 @@
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "用尽预测" } }
       }
     },
+    "%@ is used up": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "%@ is used up" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%@已用尽" } }
+      }
+    },
     "%@ runs out in ~%@": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "%@ runs out in ~%@" } },

@@ -107,8 +107,18 @@ enum ExhaustionCardCopy {
         switch line.tone {
         case .beforeReset, .countdown:
             guard let seconds else { return nil }
+            let critical = window.kind == .fiveHour || window.windowMinutes == 300 || window.remainingPercent < 10 || seconds <= 0
+            if seconds <= 0 || window.remainingPercent <= 0 {
+                return ExhaustionFact(
+                    id: window.metricID,
+                    value: ForecastCopy.format("%@ is used up", name),
+                    seconds: 0,
+                    secondary: nil,
+                    critical: true,
+                    warning: false
+                )
+            }
             let when = BurnRate.span(seconds)
-            let critical = window.kind == .fiveHour || window.windowMinutes == 300 || window.remainingPercent < 10
             return ExhaustionFact(
                 id: window.metricID,
                 value: ForecastCopy.format("%@ runs out in ~%@", name, when),
