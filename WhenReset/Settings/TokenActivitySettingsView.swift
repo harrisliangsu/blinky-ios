@@ -381,6 +381,7 @@ private struct TokenActivityPlot: View {
                             .fill(fill(week: week, row: row))
                             .padding(1)
                             .frame(width: pitch, height: pitch)
+                            .accessibilityHidden(true)
                     }
                 }
             }

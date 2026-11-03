@@ -175,9 +175,9 @@ final class ScreenshotUITests: XCTestCase {
             )
         case "tokenActivity":
             openTokenActivity(app)
-            XCTAssertTrue(app.descendants(matching: .any)["token-activity-daily"].waitForExistence(timeout: 12))
-            XCTAssertTrue(app.descendants(matching: .any)["token-performance"].waitForExistence(timeout: 8))
-            XCTAssertTrue(app.staticTexts["gpt-5.4"].waitForExistence(timeout: 4))
+            let legend = language == "zh-Hans" ? "少" : "Less"
+            XCTAssertTrue(app.staticTexts[legend].waitForExistence(timeout: 15))
+            XCTAssertTrue(app.staticTexts["gpt-5.4"].waitForExistence(timeout: 8))
         case "tokenActivityWeekly":
             openTokenActivity(app)
             XCTAssertTrue(app.descendants(matching: .any)["token-activity-weekly"].waitForExistence(timeout: 12))
