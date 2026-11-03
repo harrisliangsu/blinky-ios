@@ -303,19 +303,18 @@ enum TokenSpanMath {
         var order: [String] = []
         for record in filtered {
             for model in record.models {
-                if buckets[model.name] == nil {
-                    order.append(model.name)
-                    buckets[model.name] = Bucket()
-                }
-                buckets[model.name]?.input += model.input
-                buckets[model.name]?.output += model.output
+                var bucket = buckets[model.name] ?? Bucket()
+                if buckets[model.name] == nil { order.append(model.name) }
+                bucket.input += model.input
+                bucket.output += model.output
                 if let cache = model.cache {
-                    buckets[model.name]?.cache = (buckets[model.name]?.cache ?? 0) + cache
+                    bucket.cache = (bucket.cache ?? 0) + cache
                 }
                 if let speed = model.tokensPerSecond, model.total > 0 {
-                    buckets[model.name]?.speedWeight += model.total
-                    buckets[model.name]?.speedSum += speed * Double(model.total)
+                    bucket.speedWeight += model.total
+                    bucket.speedSum += speed * Double(model.total)
                 }
+                buckets[model.name] = bucket
             }
         }
 
