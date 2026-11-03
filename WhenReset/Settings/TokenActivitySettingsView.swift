@@ -149,26 +149,10 @@ private enum TokenActivityText {
     }
 }
 
-private struct HeatmapWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
+private struct HeatmapHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 108
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
-    }
-}
-
-private struct HeatmapWidth<Content: View>: View {
-    @ViewBuilder var content: (CGFloat) -> Content
-    @State private var width: CGFloat = 0
-
-    var body: some View {
-        content(width)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background {
-                GeometryReader { proxy in
-                    Color.clear.preference(key: HeatmapWidthKey.self, value: proxy.size.width)
-                }
-            }
-            .onPreferenceChange(HeatmapWidthKey.self) { width = $0 }
     }
 }
 
@@ -186,6 +170,7 @@ private struct TokenActivityPlot: View {
     @Environment(\.locale) private var locale
     @State private var heatmapOffset: CGFloat = 0
     @State private var didMeasureHeatmap = false
+    @State private var gridHeight: CGFloat = 108
 
     private let visibleColumns = 26
     private let gutter: CGFloat = 18
@@ -218,18 +203,22 @@ private struct TokenActivityPlot: View {
     /// The scroll view's ideal width is its content, which would collapse the
     /// grid. A clear row takes the card width, and the overlay reads that width.
     private var daily: some View {
-        HeatmapWidth { width in
-            let pitch = max((width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
-            let columns = CGFloat(max(activity.weeks.count, 1))
-            let gridHeight = 14 + 2 + pitch * 7
-            HStack(alignment: .top, spacing: gutterGap) {
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: gridHeight)
+            .overlay(alignment: .top) {
+                GeometryReader { proxy in
+                    let pitch = max((proxy.size.width - gutter - gutterGap) / CGFloat(visibleColumns), 1)
+                    let columns = CGFloat(max(activity.weeks.count, 1))
+                    let height = 14 + 2 + pitch * 7
+                    HStack(alignment: .top, spacing: gutterGap) {
                         weekdayGutter(pitch: pitch)
                             .frame(width: gutter)
                         VStack(alignment: .leading, spacing: 2) {
                             monthLabelBar(
                                 pitch: pitch,
                                 contentWidth: pitch * columns,
-                                viewportWidth: max(width - gutter - gutterGap, 1)
+                                viewportWidth: max(proxy.size.width - gutter - gutterGap, 1)
                             )
                             .frame(height: 14)
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -254,8 +243,10 @@ private struct TokenActivityPlot: View {
                             }
                         }
                     }
-                    .frame(height: gridHeight, alignment: .top)
+                    .preference(key: HeatmapHeightKey.self, value: height)
                 }
+            }
+            .onPreferenceChange(HeatmapHeightKey.self) { gridHeight = $0 }
     }
 
     /// Older weeks sit off the left edge. A short fade says the row continues that way.
