@@ -382,8 +382,15 @@ final class ForecastLogicTests: XCTestCase {
             ForecastCopy.format("%@ runs out in ~%@", "每周额度", "3 天"),
             "每周额度约 3 天后用尽"
         )
+        let soon = morning.addingTimeInterval(21 * 3_600)
+        let watch = CodexResetStatus(
+            scheduled: nil,
+            watch: .init(level: "elevated", chancePercent: 40, forecastWindow: "this week", windowEnds: soon)
+        )
+        XCTAssertEqual(PredictedResetCopy.shortCountdown(status: watch, now: morning), "约 21 小时后")
         XCTAssertEqual(ResetCardCopy.availableText(count: 1), "可用 1 张")
         useEnglish()
+        XCTAssertEqual(PredictedResetCopy.shortCountdown(status: watch, now: morning), "in ~21 hours")
         XCTAssertEqual(ResetCardCopy.availableText(count: 1), "1 available")
         XCTAssertTrue(
             QuotaResetClock.subline(until: later, from: morning, calendar: calendar)

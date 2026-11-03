@@ -225,6 +225,28 @@ enum ResetCardCopy {
     }
 }
 
+/// Short right-hand value for 预测重置. The confidence and bound stay on the line under it.
+enum PredictedResetCopy {
+    static func shortCountdown(status: CodexResetStatus?, now: Date) -> String? {
+        guard let date = instant(status, now: now) else { return nil }
+        let when = BurnRate.span(date.timeIntervalSince(now))
+        guard !when.isEmpty else { return nil }
+        return ForecastCopy.format("in ~%@", when)
+    }
+
+    private static func instant(_ status: CodexResetStatus?, now: Date) -> Date? {
+        switch status?.card {
+        case .scheduled(let date):
+            return date > now ? date : nil
+        case .watch(let watch):
+            guard let ends = watch.windowEnds, ends > now else { return nil }
+            return ends
+        default:
+            return nil
+        }
+    }
+}
+
 /// What the collapsed disclosure says on the left. Empty when nothing is worth a line.
 struct CollapsedUsageSummary: Equatable, Sendable {
     enum Tone: Equatable, Sendable {

@@ -7617,6 +7617,12 @@
         }
       }
     },
+    "in ~%@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "in ~%@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "约 %@后" } }
+      }
+    },
     "Exhaustion forecast": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Exhaustion forecast" } },

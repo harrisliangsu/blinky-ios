@@ -81,8 +81,10 @@ struct UsageFooter: View {
             resetLine: resetLine,
             resetExpiresIn: ResetCardCopy.soonestExpiry(snapshot: snapshot, now: date)
         )
-        let codexLines = codexCardLines(at: date, settings: settings)
-        let prediction = codexLines.flatMap(Self.predictionValue)
+        let codexStatus = settings.showsPredictedReset && snapshot.accountProviderID == .chatGPT
+            ? codex.display(at: date) : nil
+        let codexLines = codexCardLines(status: codexStatus, at: date, settings: settings)
+        let prediction = codexLines.flatMap { Self.predictionValue($0, status: codexStatus, now: date) }
         let latest = codexLines?.latest
         let balance = snapshot.usageWindows.isEmpty ? nil : snapshot.apiBalance
         let showsCodexButton = settings.showsPredictedReset && snapshot.accountProviderID == .chatGPT
@@ -301,17 +303,21 @@ struct UsageFooter: View {
         }
     }
 
-    private func codexCardLines(at date: Date, settings: ForecastSettings) -> CodexResetCardLines? {
+    private func codexCardLines(status: CodexResetStatus?, at date: Date, settings: ForecastSettings) -> CodexResetCardLines? {
         guard settings.showsPredictedReset, snapshot.accountProviderID == .chatGPT else { return nil }
-        let lines = CodexResetCardLines.make(codex.display(at: date), now: date)
-        let hasPrediction = Self.predictionValue(lines) != nil
+        let lines = CodexResetCardLines.make(status, now: date)
+        let hasPrediction = Self.predictionValue(lines, status: status, now: date) != nil
         guard hasPrediction || lines.latest != nil else { return nil }
         return lines
     }
 
-    private static func predictionValue(_ lines: CodexResetCardLines) -> String? {
+    /// A short clock on the right. "约 21 小时后" / "in ~21 hours", not the full sentence.
+    private static func predictionValue(_ lines: CodexResetCardLines, status: CodexResetStatus?, now: Date) -> String? {
         guard !lines.prediction.isPlaceholder else { return nil }
-        return lines.prediction.countdown ?? lines.prediction.trailing
+        if let short = PredictedResetCopy.shortCountdown(status: status, now: now) {
+            return short
+        }
+        return lines.prediction.trailing
     }
 
     private static func predictionSecondary(_ lines: CodexResetCardLines) -> String? {
@@ -393,8 +399,9 @@ private struct DetailRow: View {
     private var sideBySide: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             labelText
-            Spacer(minLength: 12)
+                .fixedSize(horizontal: true, vertical: false)
             valueStack(alignment: .trailing)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
         }
     }
 
@@ -422,13 +429,15 @@ private struct DetailRow: View {
                 .monospacedDigit()
                 .multilineTextAlignment(alignment == .trailing ? .trailing : .leading)
                 .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             ForEach(secondary, id: \.self) { line in
                 Text(line)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .multilineTextAlignment(alignment == .trailing ? .trailing : .leading)
-                    .lineLimit(2)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
