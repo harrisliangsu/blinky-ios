@@ -155,7 +155,7 @@ struct ResetCardAccountRow: View {
 
     private func labeled(at date: Date) -> some View {
         let copy = ResetCardSurface.roomyCopy(count: count, expiresAt: expiresAt, now: date)
-        ResetCardLabelValue(
+        return ResetCardLabelValue(
             label: copy.label,
             value: copy.value,
             emphasizesLabel: true,
