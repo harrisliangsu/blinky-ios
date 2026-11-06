@@ -367,7 +367,7 @@ struct ZAIProvider {
                 case .authorizationFailed, .invalidResponse:
                     mostRecentRetryableError = error
                     if urls.count == 1 { throw error }
-                case .invalidAPIKey, .noResettableQuota, .server:
+                case .invalidAPIKey, .noResettableQuota, .server, .resetRejected:
                     throw error
                 }
             }
