@@ -2232,7 +2232,7 @@ private struct LiveCompactTrailing: View {
         let visible = LiveActivityAccounts.visible(accounts)
         let trailing = LiveActivityAccounts.compactSides(of: visible).trailing
         let summary = ResetCardSurface.aggregate(visible.map { ($0.resetCardCount, $0.resetCardExpiresAt) })
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             LiveCompactCluster(accounts: trailing)
             if let summary {
                 if LiveActivityAccounts.usesShortResetMark(visible) {

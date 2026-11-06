@@ -661,24 +661,26 @@ struct StyledLiveAccountRow: View {
     }
 }
 
-/// Equal-width percent chips for the compact island. Width is fixed so the
-/// gaps between providers stay the same when a new one is added.
+/// Equal-width percent chips for the compact island.
+///
+/// The chip is only as wide as the percent, so the account nearest the camera
+/// sits against the cutout instead of behind a pad of empty black.
 struct LiveCompactCluster: View {
     var accounts: [UsageActivityAccountRow]
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             ForEach(accounts) { account in
-                VStack(spacing: 1) {
+                VStack(spacing: 0) {
                     ProviderIcon(providerID: account.providerID, symbolName: account.symbolName)
-                        .frame(width: 12, height: 12)
+                        .frame(width: 13, height: 13)
                     Text(UsageText.widgetFigure(account.headlineRemainingPercent))
                         .font(.system(size: 9, weight: .semibold))
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.65)
                 }
-                .frame(width: 30)
+                .frame(width: 24)
                 .accessibilityElement(children: .combine)
             }
         }

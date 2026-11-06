@@ -21,31 +21,23 @@ struct SmallSquareAccountStack: View {
 
     var body: some View {
         let rows = Array(snapshots.prefix(SmallSquareAccounts.maximum))
-        Group {
-            if rows.count <= 2 {
-                VStack(spacing: 6) {
-                    ForEach(rows, id: \.accountID) { snapshot in
-                        TwoAccountRow(snapshot: snapshot, now: now)
-                    }
-                }
-            } else if rows.count >= 5 {
-                // Five rows stay one line each so the last provider still fits.
-                VStack(spacing: 5) {
-                    ForEach(rows, id: \.accountID) { snapshot in
-                        DenseAccountRow(snapshot: snapshot, now: now, showsName: false)
-                    }
-                }
-            } else {
-                // Three or four named rows fill the square. A single thin line
-                // left a band of empty space above and below the stack.
-                VStack(spacing: 8) {
-                    ForEach(rows, id: \.accountID) { snapshot in
-                        DenseAccountRow(snapshot: snapshot, now: now, showsName: true)
-                    }
-                }
+        let spacing: CGFloat = rows.count >= 5 ? 2 : 4
+        VStack(spacing: spacing) {
+            ForEach(rows, id: \.accountID) { snapshot in
+                squareRow(snapshot, count: rows.count)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    @ViewBuilder
+    private func squareRow(_ snapshot: UsageSnapshot, count: Int) -> some View {
+        if count <= 2 {
+            TwoAccountRow(snapshot: snapshot, now: now)
+        } else {
+            DenseAccountRow(snapshot: snapshot, now: now, showsName: count < 5)
+        }
     }
 }
 

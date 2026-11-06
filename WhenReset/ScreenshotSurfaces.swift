@@ -24,8 +24,9 @@ struct ScreenshotSmallSquare: View {
             ScreenshotSmallUsage(snapshot: only, now: now)
         } else {
             SmallSquareAccountStack(snapshots: snapshots, now: now)
-                .padding(12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(InterfaceWidgetBackground())
         }
     }
@@ -118,11 +119,12 @@ struct ScreenshotLiveCompact: View {
         let visible = LiveActivityAccounts.visible(rows)
         let sides = LiveActivityAccounts.compactSides(of: visible)
         let summary = ResetCardSurface.aggregate(visible.map { ($0.resetCardCount, $0.resetCardExpiresAt) })
-        HStack(spacing: 8) {
+        // The camera cutout is the system's. This gap is only that cutout.
+        // Nothing is drawn in it: a dash there reads as an empty slot.
+        HStack(spacing: 2) {
             LiveCompactCluster(accounts: sides.leading)
-            Capsule()
-                .fill(Color.white.opacity(0.22))
-                .frame(width: 28, height: 6)
+            Color.clear
+                .frame(width: 8, height: 1)
                 .accessibilityHidden(true)
             LiveCompactCluster(accounts: sides.trailing)
             if let summary {
@@ -137,8 +139,8 @@ struct ScreenshotLiveCompact: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(Capsule().fill(Color.black))
         .foregroundStyle(.white)
         .fixedSize()
