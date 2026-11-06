@@ -2195,8 +2195,8 @@ private struct LiveLockView: View {
         if !state.accounts.isEmpty {
             StyledLiveAccountList(
                 rows: state.accounts,
-                denseFrom: dynamicTypeSize.isAccessibilitySize ? 1 : 3,
-                limit: dynamicTypeSize.isAccessibilitySize ? 4 : LiveActivityAccounts.maximum
+                limit: dynamicTypeSize.isAccessibilitySize ? 4 : LiveActivityAccounts.maximum,
+                denseFrom: dynamicTypeSize.isAccessibilitySize ? 1 : 3
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
