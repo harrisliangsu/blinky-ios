@@ -336,7 +336,7 @@ struct ZAIProvider {
         let request = try Self.useRequest(use, apiKey: apiKey, quotaURL: quotaURL)
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        let host = url.host ?? "both"
+        let host = request.url?.host ?? "both"
         switch status {
         case 200..<300:
             if Self.useAccepted(data) { return }
