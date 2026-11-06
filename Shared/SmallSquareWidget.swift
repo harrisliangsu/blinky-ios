@@ -113,12 +113,12 @@ private struct DenseAccountRow: View {
         let cards = ResetCardSurface.fact(snapshot: snapshot, now: now ?? .now)
         HStack(alignment: .center, spacing: 6) {
             ProviderIcon(providerID: snapshot.accountProviderID ?? .chatGPT, symbolName: snapshot.accountSymbolName)
-                .frame(width: showsName ? 16 : 14, height: showsName ? 16 : 14)
-            VStack(alignment: .leading, spacing: 2) {
+                .frame(width: showsName ? 22 : 16, height: showsName ? 22 : 16)
+            VStack(alignment: .leading, spacing: showsName ? 4 : 3) {
                 HStack(alignment: showsName ? .firstTextBaseline : .center, spacing: 4) {
                     if showsName {
                         Text(snapshot.resolvedAccountName)
-                            .font(.caption2.weight(.semibold))
+                            .font(.caption.weight(.semibold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.65)
                     }
@@ -129,7 +129,7 @@ private struct DenseAccountRow: View {
                     }
                     if let headline {
                         Text(UsageText.widgetFigure(headline.remainingPercent))
-                            .font(.caption2.weight(.semibold).monospacedDigit())
+                            .font((showsName ? Font.caption : Font.caption2).weight(.semibold).monospacedDigit())
                             .lineLimit(1)
                             .fixedSize()
                             .layoutPriority(1)
@@ -140,7 +140,7 @@ private struct DenseAccountRow: View {
                     }
                 }
                 if showsName, let headline {
-                    ThinQuotaBar(remainingFraction: headline.remainingPercent / 100)
+                    ThinQuotaBar(remainingFraction: headline.remainingPercent / 100, height: 5)
                 }
             }
         }
@@ -167,6 +167,7 @@ struct ResetCardCountBadge: View {
 
 private struct ThinQuotaBar: View {
     var remainingFraction: Double
+    var height: CGFloat = 3
     @Environment(\.quotaPercentBasis) private var basis
     @Environment(\.colorScheme) private var colorScheme
 
@@ -182,7 +183,7 @@ private struct ThinQuotaBar: View {
                     .frame(width: max(fill > 0 ? 2 : 0, geo.size.width * fill))
             }
         }
-        .frame(height: 3)
+        .frame(height: height)
         .frame(maxWidth: .infinity)
         .accessibilityHidden(true)
     }
