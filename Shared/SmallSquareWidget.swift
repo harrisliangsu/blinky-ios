@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// How many accounts the square widget keeps from the stored custom order.
-/// The caller passes 4 for "as many as exist". Never more than four.
+/// Automatic passes this cap. Five is the most that still fits: four named
+/// rows fill the square, and a fifth stays a single line so 智谱 is not dropped
+/// off the end of a four-account list.
 enum SmallSquareAccounts {
-    static let maximum = 4
+    static let maximum = 5
 
     static func visible(_ ordered: [UsageSnapshot], limit: Int) -> [UsageSnapshot] {
         let cap = min(maximum, max(1, limit))
@@ -11,7 +13,7 @@ enum SmallSquareAccounts {
     }
 }
 
-/// Square widget for two, three, or four accounts.
+/// Square widget for two to five accounts.
 /// One account stays on the rich card. Order is the array order.
 struct SmallSquareAccountStack: View {
     var snapshots: [UsageSnapshot]
@@ -21,15 +23,24 @@ struct SmallSquareAccountStack: View {
         let rows = Array(snapshots.prefix(SmallSquareAccounts.maximum))
         Group {
             if rows.count <= 2 {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     ForEach(rows, id: \.accountID) { snapshot in
                         TwoAccountRow(snapshot: snapshot, now: now)
                     }
                 }
-            } else {
-                VStack(spacing: rows.count >= 4 ? 5 : 7) {
+            } else if rows.count >= 5 {
+                // Five rows stay one line each so the last provider still fits.
+                VStack(spacing: 5) {
                     ForEach(rows, id: \.accountID) { snapshot in
-                        DenseAccountRow(snapshot: snapshot, now: now)
+                        DenseAccountRow(snapshot: snapshot, now: now, showsName: false)
+                    }
+                }
+            } else {
+                // Three or four named rows fill the square. A single thin line
+                // left a band of empty space above and below the stack.
+                VStack(spacing: 8) {
+                    ForEach(rows, id: \.accountID) { snapshot in
+                        DenseAccountRow(snapshot: snapshot, now: now, showsName: true)
                     }
                 }
             }
@@ -97,29 +108,48 @@ private struct TwoAccountRow: View {
     }
 }
 
-/// Icon, thin bar, percent, and a card badge. No name, so four rows still fit.
+/// Icon, quota, and a card badge. Three and four accounts also keep the name
+/// so the square is not a stack of anonymous bars. Five accounts drop the name
+/// so the last row is not clipped.
 private struct DenseAccountRow: View {
     var snapshot: UsageSnapshot
     var now: Date?
+    var showsName: Bool
 
     var body: some View {
         let headline = snapshot.headlineWindow(pinnedMetricID: nil)
         let cards = ResetCardSurface.fact(snapshot: snapshot, now: now ?? .now)
-        HStack(spacing: 6) {
+        HStack(alignment: .center, spacing: 6) {
             ProviderIcon(providerID: snapshot.accountProviderID ?? .chatGPT, symbolName: snapshot.accountSymbolName)
-                .frame(width: 14, height: 14)
-            if let headline {
-                ThinQuotaBar(remainingFraction: headline.remainingPercent / 100)
-                Text(UsageText.widgetFigure(headline.remainingPercent))
-                    .font(.caption2.weight(.semibold).monospacedDigit())
-                    .lineLimit(1)
-                    .fixedSize()
-                    .layoutPriority(1)
-            } else {
-                Spacer(minLength: 0)
-            }
-            if let cards {
-                ResetCardCountBadge(count: cards.count)
+                .frame(width: showsName ? 16 : 14, height: showsName ? 16 : 14)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: showsName ? .firstTextBaseline : .center, spacing: 4) {
+                    if showsName {
+                        Text(snapshot.resolvedAccountName)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                    }
+                    if !showsName, let headline {
+                        ThinQuotaBar(remainingFraction: headline.remainingPercent / 100)
+                    } else {
+                        Spacer(minLength: 4)
+                    }
+                    if let headline {
+                        Text(UsageText.widgetFigure(headline.remainingPercent))
+                            .font(.caption2.weight(.semibold).monospacedDigit())
+                            .lineLimit(1)
+                            .fixedSize()
+                            .layoutPriority(1)
+                    }
+                    if let cards {
+                        ResetCardCountBadge(count: cards.count)
+                            .layoutPriority(1)
+                    }
+                }
+                if showsName, let headline {
+                    ThinQuotaBar(remainingFraction: headline.remainingPercent / 100)
+                }
             }
         }
         .accessibilityElement(children: .combine)

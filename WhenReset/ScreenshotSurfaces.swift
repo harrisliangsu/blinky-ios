@@ -93,11 +93,12 @@ struct ScreenshotLiveLock: View {
     var rows: [UsageActivityAccountRow]
     var now: Date = .now
     var onDarkSurface = false
-    var limit = 4
+    var denseFrom = 3
 
     var body: some View {
-        StyledLiveAccountList(rows: rows, onDarkSurface: onDarkSurface, limit: limit, now: now)
-            .padding(12)
+        StyledLiveAccountList(rows: rows, onDarkSurface: onDarkSurface, denseFrom: denseFrom, now: now)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background {
                 if onDarkSurface {
@@ -114,28 +115,34 @@ struct ScreenshotLiveCompact: View {
     var rows: [UsageActivityAccountRow]
 
     var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                ForEach(rows.prefix(3)) { account in
-                    VStack(spacing: 1) {
-                        ProviderIcon(providerID: account.providerID)
-                            .frame(width: 14, height: 14)
-                        Text(UsageText.widgetFigure(account.headlineRemainingPercent))
-                            .font(.system(size: 9, weight: .semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                    }
+        let visible = LiveActivityAccounts.visible(rows)
+        let sides = LiveActivityAccounts.compactSides(of: visible)
+        let summary = ResetCardSurface.aggregate(visible.map { ($0.resetCardCount, $0.resetCardExpiresAt) })
+        HStack(spacing: 8) {
+            LiveCompactCluster(accounts: sides.leading)
+            Capsule()
+                .fill(Color.white.opacity(0.22))
+                .frame(width: 28, height: 6)
+                .accessibilityHidden(true)
+            LiveCompactCluster(accounts: sides.trailing)
+            if let summary {
+                if LiveActivityAccounts.usesShortResetMark(visible) {
+                    Text(ResetCardSurface.compactBadge(count: summary.count))
+                        .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .accessibilityLabel(ResetCardSurface.name(count: summary.count))
+                } else {
+                    ResetCardCompactMark(count: summary.count)
                 }
             }
-            Spacer(minLength: 6)
-            if let count = rows.first(where: { $0.resetCardCount > 0 })?.resetCardCount {
-                ResetCardCompactMark(count: count)
-            }
         }
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(Capsule().fill(Color.black))
         .foregroundStyle(.white)
+        .fixedSize()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 #endif
