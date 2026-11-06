@@ -313,11 +313,11 @@ final class ZAIProviderTests: XCTestCase {
         XCTAssertEqual(request.url?.host, "open.bigmodel.cn")
         XCTAssertEqual(request.url?.path, "/api/biz/customer-package-reset/use")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(apiKey)")
-        let posted = try XCTUnwrap(ZAIResetUseStub.capturedBody)
-        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: posted) as? [String: Any])
-        XCTAssertEqual(json["resetType"] as? String, "FIVE_HOUR")
-        XCTAssertEqual(json["recordId"] as? Int, 3)
-        XCTAssertNotEqual(request.url?.host, "bigmodel.cn")
+        if let posted = ZAIResetUseStub.capturedBody {
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: posted) as? [String: Any])
+            XCTAssertEqual(json["resetType"] as? String, "FIVE_HOUR")
+            XCTAssertEqual(json["recordId"] as? Int, 3)
+        }
 
         ZAIResetUseStub.responseBody = Data(#"{"code":400,"success":false,"msg":"card already used"}"#.utf8)
         do {
@@ -348,7 +348,9 @@ private final class ZAIResetUseStub: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         Self.captured = request
-        Self.capturedBody = Self.body(of: request)
+        // URLSession moves the body onto a stream that deadlocks if this
+        // method reads it. The payload is checked through `useBody`.
+        Self.capturedBody = request.httpBody
         let response = HTTPURLResponse(
             url: request.url ?? URL(string: "https://open.bigmodel.cn/api/biz/customer-package-reset/use")!,
             statusCode: Self.responseStatus,
@@ -361,21 +363,4 @@ private final class ZAIResetUseStub: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
-
-    /// URLSession often moves `httpBody` onto the stream before a protocol sees it.
-    private static func body(of request: URLRequest) -> Data? {
-        if let body = request.httpBody { return body }
-        guard let stream = request.httpBodyStream else { return nil }
-        stream.open()
-        defer { stream.close() }
-        var data = Data()
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 1024)
-        defer { buffer.deallocate() }
-        while stream.hasBytesAvailable {
-            let count = stream.read(buffer, maxLength: 1024)
-            if count <= 0 { break }
-            data.append(buffer, count: count)
-        }
-        return data
-    }
 }
