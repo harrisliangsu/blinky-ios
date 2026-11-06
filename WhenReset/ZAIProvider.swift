@@ -317,9 +317,9 @@ struct ZAIProvider {
         return true
     }
 
-    func redeem(_ use: ZAIResetUse, apiKey: String, quotaURL: URL) async throws {
-        let key = try Self.normalizedKey(apiKey)
-        guard let url = Self.resetUseURL(quotaURL: quotaURL) else {
+    static func useRequest(_ use: ZAIResetUse, apiKey: String, quotaURL: URL) throws -> URLRequest {
+        let key = try normalizedKey(apiKey)
+        guard let url = resetUseURL(quotaURL: quotaURL) else {
             throw ZAIProviderError.resetRejected(String.localized("Could not use the reset card."))
         }
         var request = URLRequest(url: url)
@@ -328,7 +328,12 @@ struct ZAIProvider {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("WhenReset/1.0", forHTTPHeaderField: "User-Agent")
-        request.httpBody = try JSONSerialization.data(withJSONObject: Self.useBody(use))
+        request.httpBody = try JSONSerialization.data(withJSONObject: useBody(use))
+        return request
+    }
+
+    func redeem(_ use: ZAIResetUse, apiKey: String, quotaURL: URL) async throws {
+        let request = try Self.useRequest(use, apiKey: apiKey, quotaURL: quotaURL)
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let host = url.host ?? "both"

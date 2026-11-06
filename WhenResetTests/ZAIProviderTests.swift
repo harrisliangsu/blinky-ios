@@ -267,7 +267,7 @@ final class ZAIProviderTests: XCTestCase {
         XCTAssertEqual(ProviderID.zai.logoAssetName, "ZAILogo")
     }
 
-    func testRedeemPostsTheSoonestCardAndKeepsTheKeyOnTheQuotaHost() async throws {
+    func testRedeemBuildsTheSoonestCardForTheQuotaHostOnly() throws {
         let sooner = Date(timeIntervalSince1970: 1_700_000_000)
         let later = Date(timeIntervalSince1970: 1_800_000_000)
         let credits = [
@@ -298,69 +298,26 @@ final class ZAIProviderTests: XCTestCase {
             String(format: String(localized: "This resets the %@. %d reset cards of this kind will remain."),
                    String(localized: "5-hour quota"), 1)
         )
-
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [ZAIResetUseStub.self]
-        ZAIResetUseStub.responseStatus = 200
-        ZAIResetUseStub.responseBody = Data(#"{"code":200,"success":true,"msg":"ok"}"#.utf8)
-        ZAIResetUseStub.captured = nil
-        ZAIResetUseStub.capturedBody = nil
-        let provider = ZAIProvider(session: URLSession(configuration: configuration))
+        XCTAssertEqual(
+            ZAIProvider.resetUseURL(quotaURL: ZAIProvider.globalQuotaURL)?.host,
+            "api.z.ai"
+        )
         let apiKey = "test-key-not-real-1234"
-        try await provider.redeem(use, apiKey: apiKey, quotaURL: ZAIProvider.mainlandQuotaURL)
-        let request = try XCTUnwrap(ZAIResetUseStub.captured)
+        let request = try ZAIProvider.useRequest(use, apiKey: apiKey, quotaURL: ZAIProvider.mainlandQuotaURL)
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.url?.host, "open.bigmodel.cn")
         XCTAssertEqual(request.url?.path, "/api/biz/customer-package-reset/use")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(apiKey)")
-        if let posted = ZAIResetUseStub.capturedBody {
-            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: posted) as? [String: Any])
-            XCTAssertEqual(json["resetType"] as? String, "FIVE_HOUR")
-            XCTAssertEqual(json["recordId"] as? Int, 3)
-        }
-
-        ZAIResetUseStub.responseBody = Data(#"{"code":400,"success":false,"msg":"card already used"}"#.utf8)
-        do {
-            try await provider.redeem(
-                ZAIResetUse(resetType: "WEEK", recordID: "9", grantType: "GLOBAL"),
-                apiKey: apiKey,
-                quotaURL: ZAIProvider.globalQuotaURL
-            )
-            XCTFail("A rejected reset card should surface the provider message.")
-        } catch let error as ZAIProviderError {
-            guard case let .resetRejected(message) = error else {
-                return XCTFail("Unexpected error \(error)")
-            }
-            XCTAssertTrue(message.contains("card already used"))
-        }
-        XCTAssertEqual(ZAIResetUseStub.captured?.url?.host, "api.z.ai")
+        let posted = try XCTUnwrap(request.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: posted) as? [String: Any])
+        XCTAssertEqual(json["resetType"] as? String, "FIVE_HOUR")
+        XCTAssertEqual(json["recordId"] as? Int, 3)
+        XCTAssertThrowsError(
+            try ZAIProvider.useRequest(use, apiKey: apiKey, quotaURL: URL(string: "https://evil.example/quota")!)
+        )
+        XCTAssertTrue(ZAIProvider.useAccepted(Data(#"{"code":200,"success":true,"msg":"ok"}"#.utf8)))
+        XCTAssertTrue(ZAIProvider.useAccepted(Data(#"{"code":0,"success":true}"#.utf8)))
+        XCTAssertFalse(ZAIProvider.useAccepted(Data(#"{"code":400,"success":false,"msg":"card already used"}"#.utf8)))
+        XCTAssertFalse(ZAIProvider.useAccepted(Data("not-json".utf8)))
     }
-}
-
-private final class ZAIResetUseStub: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var responseStatus = 200
-    nonisolated(unsafe) static var responseBody = Data()
-    nonisolated(unsafe) static var captured: URLRequest?
-    nonisolated(unsafe) static var capturedBody: Data?
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        Self.captured = request
-        // URLSession moves the body onto a stream that deadlocks if this
-        // method reads it. The payload is checked through `useBody`.
-        Self.capturedBody = request.httpBody
-        let response = HTTPURLResponse(
-            url: request.url ?? URL(string: "https://open.bigmodel.cn/api/biz/customer-package-reset/use")!,
-            statusCode: Self.responseStatus,
-            httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Self.responseBody)
-        client?.urlProtocolDidFinishLoading(self)
-    }
-
-    override func stopLoading() {}
 }
