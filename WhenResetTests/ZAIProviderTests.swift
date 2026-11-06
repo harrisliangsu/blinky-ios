@@ -103,7 +103,7 @@ final class ZAIProviderTests: XCTestCase {
               { "recordId": 3, "expireTime": "2026-11-07 15:59:59", "available": true }
             ],
             "weekResets": [
-              { "recordId": 9, "expireTime": "2026-12-01 08:00:00", "available": true }
+              { "recordId": 9, "expireTime": "2026-12-01 08:00:00", "available": true, "grantType": "GLOBAL" }
             ]
           }
         }
@@ -113,6 +113,9 @@ final class ZAIProviderTests: XCTestCase {
             "zai-reset-fiveHourResets-3",
             "zai-reset-weekResets-9",
         ])
+        XCTAssertEqual(credits.map(\.resetWindow), ["FIVE_HOUR", "WEEK"])
+        XCTAssertEqual(credits.map(\.providerRecordID), ["3", "9"])
+        XCTAssertEqual(credits.map(\.grantType), ["GLOBAL", "GLOBAL"])
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
         let soonest = try XCTUnwrap(credits[0].expiresAt)
@@ -262,5 +265,117 @@ final class ZAIProviderTests: XCTestCase {
         XCTAssertEqual(ProviderID.zai.displayName, "z.ai")
         XCTAssertEqual(ProviderID.zhipu.displayName, "智谱")
         XCTAssertEqual(ProviderID.zai.logoAssetName, "ZAILogo")
+    }
+
+    func testRedeemPostsTheSoonestCardAndKeepsTheKeyOnTheQuotaHost() async throws {
+        let sooner = Date(timeIntervalSince1970: 1_700_000_000)
+        let later = Date(timeIntervalSince1970: 1_800_000_000)
+        let credits = [
+            ResetCredit(id: "later", expiresAt: later, status: "available",
+                        providerRecordID: "11", resetWindow: "FIVE_HOUR", grantType: "GLOBAL"),
+            ResetCredit(id: "sooner", expiresAt: sooner, status: "available",
+                        providerRecordID: "3", resetWindow: "FIVE_HOUR", grantType: nil),
+            ResetCredit(id: "week", expiresAt: sooner, status: "available",
+                        providerRecordID: "9", resetWindow: "WEEK", grantType: "GLOBAL"),
+        ]
+        let now = Date(timeIntervalSince1970: 1_600_000_000)
+        let use = try XCTUnwrap(ZAIProvider.soonestUse(in: credits, resetType: "FIVE_HOUR", now: now))
+        XCTAssertEqual(use, ZAIResetUse(resetType: "FIVE_HOUR", recordID: "3", grantType: "GLOBAL"))
+        XCTAssertNil(ZAIProvider.soonestUse(in: credits, resetType: "WEEK", now: later.addingTimeInterval(1)))
+        let body = ZAIProvider.useBody(use)
+        XCTAssertEqual(body["targetType"] as? String, "PERSONAL")
+        XCTAssertEqual(body["resetType"] as? String, "FIVE_HOUR")
+        XCTAssertEqual(body["recordId"] as? Int, 3)
+        XCTAssertEqual(body["grantType"] as? String, "GLOBAL")
+        XCTAssertEqual(body["requestId"] as? String, "")
+        XCTAssertEqual(
+            ZAIProvider.resetUseURL(quotaURL: ZAIProvider.mainlandQuotaURL)?.path,
+            "/api/biz/customer-package-reset/use"
+        )
+        XCTAssertNil(ZAIProvider.resetUseURL(quotaURL: URL(string: "https://evil.example/quota")!))
+        XCTAssertEqual(
+            ResetCardUseButton.confirmation(for: use, credits: credits),
+            String(format: String(localized: "This resets the %@. %d reset cards of this kind will remain."),
+                   String(localized: "5-hour quota"), 1)
+        )
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ZAIResetUseStub.self]
+        ZAIResetUseStub.responseStatus = 200
+        ZAIResetUseStub.responseBody = Data(#"{"code":200,"success":true,"msg":"ok"}"#.utf8)
+        ZAIResetUseStub.captured = nil
+        ZAIResetUseStub.capturedBody = nil
+        let provider = ZAIProvider(session: URLSession(configuration: configuration))
+        let apiKey = "test-key-not-real-1234"
+        try await provider.redeem(use, apiKey: apiKey, quotaURL: ZAIProvider.mainlandQuotaURL)
+        let request = try XCTUnwrap(ZAIResetUseStub.captured)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.host, "open.bigmodel.cn")
+        XCTAssertEqual(request.url?.path, "/api/biz/customer-package-reset/use")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(apiKey)")
+        let posted = try XCTUnwrap(ZAIResetUseStub.capturedBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: posted) as? [String: Any])
+        XCTAssertEqual(json["resetType"] as? String, "FIVE_HOUR")
+        XCTAssertEqual(json["recordId"] as? Int, 3)
+        XCTAssertNotEqual(request.url?.host, "bigmodel.cn")
+
+        ZAIResetUseStub.responseBody = Data(#"{"code":400,"success":false,"msg":"card already used"}"#.utf8)
+        do {
+            try await provider.redeem(
+                ZAIResetUse(resetType: "WEEK", recordID: "9", grantType: "GLOBAL"),
+                apiKey: apiKey,
+                quotaURL: ZAIProvider.globalQuotaURL
+            )
+            XCTFail("A rejected reset card should surface the provider message.")
+        } catch let error as ZAIProviderError {
+            guard case let .resetRejected(message) = error else {
+                return XCTFail("Unexpected error \(error)")
+            }
+            XCTAssertTrue(message.contains("card already used"))
+        }
+        XCTAssertEqual(ZAIResetUseStub.captured?.url?.host, "api.z.ai")
+    }
+}
+
+private final class ZAIResetUseStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var responseStatus = 200
+    nonisolated(unsafe) static var responseBody = Data()
+    nonisolated(unsafe) static var captured: URLRequest?
+    nonisolated(unsafe) static var capturedBody: Data?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.captured = request
+        Self.capturedBody = Self.body(of: request)
+        let response = HTTPURLResponse(
+            url: request.url ?? URL(string: "https://open.bigmodel.cn/api/biz/customer-package-reset/use")!,
+            statusCode: Self.responseStatus,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Self.responseBody)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+
+    /// URLSession often moves `httpBody` onto the stream before a protocol sees it.
+    private static func body(of request: URLRequest) -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 1024)
+        defer { buffer.deallocate() }
+        while stream.hasBytesAvailable {
+            let count = stream.read(buffer, maxLength: 1024)
+            if count <= 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
