@@ -143,7 +143,6 @@ private final class MacAppRuntime {
 }
 #endif
 
-@MainActor
 enum BackgroundRefreshScheduler {
     static let identifier = UsageHistoryStore.refreshTaskIdentifier
     /// Internal only. Not shown in Settings.
@@ -171,32 +170,42 @@ enum BackgroundRefreshScheduler {
 }
 
 #if os(iOS)
+@MainActor
 enum BackgroundRefreshController {
-    nonisolated(unsafe) private static var didRegister = false
+    private static var didRegister = false
+    private static var store: AppStore?
 
     /// Must run before `application(_:didFinishLaunchingWithOptions:)` returns.
     /// `App.init` is early enough. Do not also use `.backgroundTask`, which would register twice.
     static func register(store: AppStore) {
+        self.store = store
         guard !didRegister else { return }
         didRegister = true
-        BGTaskScheduler.shared.register(
-            forTaskWithIdentifier: BackgroundRefreshScheduler.identifier,
-            using: nil
-        ) { task in
-            guard let task = task as? BGAppRefreshTask else {
+        let identifier = BackgroundRefreshScheduler.identifier
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
                 return
             }
             let work = Task { @MainActor in
-                BackgroundRefreshScheduler.noteRunStarted()
-                BackgroundRefreshScheduler.scheduleNext(after: store.refreshSettings.backgroundInterval)
-                await store.synchronizeAccountsFromICloudKeychain()
-                let refreshed = await store.refreshAll(source: .background)
-                task.setTaskCompleted(success: refreshed && !Task.isCancelled)
+                await run(refreshTask)
             }
-            task.expirationHandler = {
+            refreshTask.expirationHandler = {
                 work.cancel()
             }
+        }
+    }
+
+    @MainActor
+    private static func run(_ task: BGAppRefreshTask) async {
+        BackgroundRefreshScheduler.noteRunStarted()
+        if let store {
+            BackgroundRefreshScheduler.scheduleNext(after: store.refreshSettings.backgroundInterval)
+            await store.synchronizeAccountsFromICloudKeychain()
+            let refreshed = await store.refreshAll(source: .background)
+            task.setTaskCompleted(success: refreshed && !Task.isCancelled)
+        } else {
+            task.setTaskCompleted(success: false)
         }
     }
 }
