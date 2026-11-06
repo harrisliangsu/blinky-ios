@@ -172,7 +172,7 @@ enum BackgroundRefreshScheduler {
 
 #if os(iOS)
 enum BackgroundRefreshController {
-    private static var didRegister = false
+    nonisolated(unsafe) private static var didRegister = false
 
     /// Must run before `application(_:didFinishLaunchingWithOptions:)` returns.
     /// `App.init` is early enough. Do not also use `.backgroundTask`, which would register twice.
