@@ -582,24 +582,20 @@ struct MonitoredAccount: Identifiable, Codable, Hashable, Sendable {
         return remote.isEmpty ? providerID.displayName : remote
     }
 
-    /// The usage card's title. A Kimi Code card keeps the provider name; the
-    /// signed-in profile or email stays in the account settings and widgets,
-    /// not on the card. A custom name the user typed still wins.
+    /// The usage card's title. Every card carries the provider name, so
+    /// ChatGPT, Grok, and 智谱 do not show a profile name or an email, and a
+    /// 智谱 account never shows "z.ai". A custom name the user typed still
+    /// wins.
     var usageCardTitle: String {
         let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let custom, !custom.isEmpty { return custom }
-        if providerID == .kimi { return providerDisplayName }
-        return resolvedDisplayName
+        return providerDisplayName
     }
 
-    /// The usage card's subtitle. Kimi Code shows the plan alone there, so the
-    /// provider name is not written twice on one card.
+    /// The usage card's subtitle. The provider name with the plan, so the
+    /// title and the plan stay in one line: "ChatGPT Pro", "智谱 Max".
     func usageCardSubtitle(plan: String?) -> String {
-        let custom = customDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if providerID == .kimi, (custom?.isEmpty ?? true) {
-            return ProviderID.kimi.planDisplayName(plan) ?? providerDisplayName
-        }
-        return providerSectionTitle(plan: plan)
+        providerSectionTitle(plan: plan)
     }
 
     mutating func mergeProviderDetails(_ details: ProviderAccountDetails) {

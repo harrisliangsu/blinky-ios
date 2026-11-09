@@ -5504,7 +5504,7 @@ final class AppStore {
 
     private func presentedSnapshot(_ snapshot: UsageSnapshot, for account: MonitoredAccount) -> UsageSnapshot {
         var result = snapshot
-        result.accountName = account.resolvedDisplayName
+        result.accountName = account.usageCardTitle
         result.accountProviderID = account.providerID
         result.accountSymbolName = account.customSymbolName
         return result
