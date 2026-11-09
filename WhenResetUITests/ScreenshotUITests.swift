@@ -264,29 +264,56 @@ final class ScreenshotUITests: XCTestCase {
             // 智谱 is the only seeded account with reset credits (one 5-hour
             // and one weekly card). Its header keeps the 智谱 name in every
             // language, which separates it from the ChatGPT cards that also
-            // expose the use control now.
+            // expose the use control now. SwiftUI list cells carry no
+            // aggregated label, so the card is located by the title's frame
+            // and the controls are picked by their position under it.
+            let zhipuTitle = app.staticTexts["智谱"]
             var findSwipes = 0
-            while !app.staticTexts["智谱"].exists && findSwipes < 10 {
+            while findSwipes < 12 {
+                if zhipuTitle.exists,
+                   zhipuTitle.frame.origin.y > 0,
+                   zhipuTitle.frame.maxY < 700 {
+                    break
+                }
                 app.swipeUp()
                 findSwipes += 1
             }
-            let card = app.cells
-                .matching(NSPredicate(format: "label CONTAINS %@", "智谱"))
-                .firstMatch
-            XCTAssertTrue(card.waitForExistence(timeout: 4))
-            let disclosure = card.descendants(matching: .any)
-                .matching(NSPredicate(format: "identifier == %@", "forecasts-disclosure"))
-                .firstMatch
-            XCTAssertTrue(disclosure.waitForExistence(timeout: 4))
+            XCTAssertTrue(zhipuTitle.waitForExistence(timeout: 4))
+            func elementBelowTitle(_ identifier: String, within maxOffset: CGFloat) -> XCUIElement? {
+                guard zhipuTitle.exists else { return nil }
+                let titleTop = zhipuTitle.frame.origin.y
+                let matches = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "identifier == %@", identifier))
+                for index in 0..<matches.count {
+                    let candidate = matches.element(boundBy: index)
+                    let y = candidate.frame.origin.y
+                    if y > titleTop, y < titleTop + maxOffset {
+                        return candidate
+                    }
+                }
+                return nil
+            }
+            var disclosure = elementBelowTitle("forecasts-disclosure", within: 320)
+            var disclosureSwipes = 0
+            while (disclosure == nil || !disclosure!.isHittable) && disclosureSwipes < 4 {
+                app.swipeUp()
+                disclosureSwipes += 1
+                disclosure = elementBelowTitle("forecasts-disclosure", within: 320)
+            }
+            guard let disclosure, disclosure.isHittable else {
+                XCTFail("智谱 card disclosure not found")
+                return
+            }
             disclosure.tap()
-            let button = card.descendants(matching: .any)["use-reset-card"]
             var cardSwipes = 0
-            while button.exists && !button.isHittable && cardSwipes < 8 {
+            while cardSwipes < 8 {
+                if let button = elementBelowTitle("use-reset-card", within: 560), button.isHittable {
+                    button.tap()
+                    break
+                }
                 app.swipeUp()
                 cardSwipes += 1
             }
-            XCTAssertTrue(button.waitForExistence(timeout: 8))
-            button.tap()
             let fiveHour = language == "zh-Hans" ? "5 小时额度" : "5-hour quota"
             let weekly = language == "zh-Hans" ? "每周额度" : "Weekly quota"
             XCTAssertTrue(app.buttons[fiveHour].waitForExistence(timeout: 6))
