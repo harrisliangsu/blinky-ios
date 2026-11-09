@@ -72,7 +72,7 @@ enum InterfaceStyle: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .classic: String.localized("Classic")
-        case .screenTime: String.localized("Screen Time")
+        case .screenTime: String.localized("Blocks")
         case .liquidGlass: String.localized("Liquid Glass")
         }
     }
