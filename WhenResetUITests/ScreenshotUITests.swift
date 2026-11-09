@@ -261,21 +261,25 @@ final class ScreenshotUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["估算价值"].exists)
             XCTAssertFalse(app.staticTexts["Estimated value"].exists)
         case "resetCard":
-            let disclosures = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "identifier == %@", "forecasts-disclosure"))
-            let button = app.descendants(matching: .any)["use-reset-card"]
-            // The use control lives in the expanded Reset cards row, so the
-            // card's disclosure is opened first.
-            var expandAttempts = 0
-            while !button.exists && expandAttempts < max(disclosures.count, 1) + 2 {
-                let item = disclosures.element(boundBy: min(expandAttempts, max(disclosures.count - 1, 0)))
-                if item.isHittable {
-                    item.tap()
-                } else {
-                    app.swipeUp()
-                }
-                expandAttempts += 1
+            // 智谱 is the only seeded account with reset credits (one 5-hour
+            // and one weekly card). Its header keeps the 智谱 name in every
+            // language, which separates it from the ChatGPT cards that also
+            // expose the use control now.
+            var findSwipes = 0
+            while !app.staticTexts["智谱"].exists && findSwipes < 10 {
+                app.swipeUp()
+                findSwipes += 1
             }
+            let card = app.cells
+                .matching(NSPredicate(format: "label CONTAINS %@", "智谱"))
+                .firstMatch
+            XCTAssertTrue(card.waitForExistence(timeout: 4))
+            let disclosure = card.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", "forecasts-disclosure"))
+                .firstMatch
+            XCTAssertTrue(disclosure.waitForExistence(timeout: 4))
+            disclosure.tap()
+            let button = card.descendants(matching: .any)["use-reset-card"]
             var cardSwipes = 0
             while button.exists && !button.isHittable && cardSwipes < 8 {
                 app.swipeUp()
@@ -392,7 +396,7 @@ final class ScreenshotUITests: XCTestCase {
         case "classic":
             return chinese ? "经典" : "Classic"
         case "screenTime":
-            return chinese ? "方块进度条" : "Block bars"
+            return chinese ? "方块" : "Blocks"
         default:
             return chinese ? "液态玻璃" : "Liquid Glass"
         }
