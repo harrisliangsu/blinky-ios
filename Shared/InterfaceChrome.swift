@@ -69,11 +69,14 @@ private struct ScreenTimePageFill: View {
 }
 
 /// Saturated field behind Liquid Glass, so the blur has something to blur.
+/// `colorScheme` overrides the environment for surfaces that read the stored
+/// theme directly, such as the widget background.
 struct InterfaceGlassBackdrop: View {
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorScheme) private var environmentScheme
+    var colorScheme: ColorScheme? = nil
 
     var body: some View {
-        let dark = colorScheme == .dark
+        let dark = (colorScheme ?? environmentScheme) == .dark
         LinearGradient(
             colors: dark
                 ? [
@@ -94,22 +97,29 @@ struct InterfaceGlassBackdrop: View {
 }
 
 /// Widget and Live Activity fill. Follows the same three surfaces as the app.
-/// Classic draws explicit white or black instead of `systemBackground`: a
-/// UIKit-backed color resolves against the system appearance, so a stored
-/// light or dark choice would not reach it.
+///
+/// The stored style and appearance are read directly rather than through the
+/// environment: the `containerBackground` closure sits outside the widget
+/// content's environment chain, so environment overrides did not reach it, and
+/// a UIKit-backed color resolves against the system appearance anyway. The
+/// system choice still falls back to the environment's scheme, which in a
+/// widget is the widget's own system-driven scheme.
 struct InterfaceWidgetBackground: View {
-    @Environment(\.interfaceStyle) private var interfaceStyle
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorScheme) private var systemScheme
+
+    private var scheme: ColorScheme {
+        AppAppearance.current.colorScheme ?? systemScheme
+    }
 
     var body: some View {
-        switch interfaceStyle {
+        switch InterfaceStyle.current {
         case .classic:
-            colorScheme == .dark ? Color.black : Color.white
+            scheme == .dark ? Color.black : Color.white
         case .screenTime:
-            InterfacePalette.screenTimeCanvas(colorScheme)
+            InterfacePalette.screenTimeCanvas(scheme)
         case .liquidGlass:
             ZStack {
-                InterfaceGlassBackdrop()
+                InterfaceGlassBackdrop(colorScheme: scheme)
                 Rectangle().fill(.ultraThinMaterial)
             }
         }
