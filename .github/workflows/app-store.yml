@@ -70,11 +70,13 @@ jobs:
           # project.yml is the only version a bump edits. xcodegen writes the
           # same values into project.pbxproj; do not read that file here.
           marketing_version=$(awk -F'"' '/^[[:space:]]*MARKETING_VERSION:/ { print $2; exit }' project.yml)
-          if [[ -z "$marketing_version" ]]; then
-            echo "Could not read MARKETING_VERSION from project.yml." >&2
+          checked_in_build=$(awk -F'"' '/^[[:space:]]*CURRENT_PROJECT_VERSION:/ { print $2; exit }' project.yml)
+          if [[ -z "$marketing_version" || ! "$checked_in_build" =~ ^[0-9]+$ ]]; then
+            echo "Could not read MARKETING_VERSION and CURRENT_PROJECT_VERSION from project.yml." >&2
             exit 1
           fi
           echo "marketing_version=$marketing_version" >> "$GITHUB_OUTPUT"
+          echo "checked_in_build=$checked_in_build" >> "$GITHUB_OUTPUT"
 
       - name: Prepare App Store Connect credential
         if: steps.release_guard.outputs.should_release == 'true'
@@ -108,6 +110,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_IDENTIFIER != '' && vars.APP_BUNDLE_IDENTIFIER || 'com.harrisliangsu.whenreset' }}
           MARKETING_VERSION: ${{ steps.version.outputs.marketing_version }}
+          CURRENT_PROJECT_VERSION: ${{ steps.version.outputs.checked_in_build }}
           RELEASE_PLATFORMS: ${{ github.event_name == 'schedule' && 'IOS' || inputs.platform == 'both' && 'IOS,MAC_OS' || inputs.platform == 'macos' && 'MAC_OS' || 'IOS' }}
         run: ruby .github/scripts/next-app-store-build.rb
 

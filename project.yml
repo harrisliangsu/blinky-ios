@@ -14,10 +14,12 @@ settings:
   base:
     # Bump the marketing version and build number only here, then run
     # `xcodegen generate --spec project.yml` and commit the Xcode project.
+    # CURRENT_PROJECT_VERSION is a floor: TestFlight uploads this build, or
+    # one above the highest build already on App Store Connect.
     SWIFT_VERSION: "6.0"
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "1.11"
-    CURRENT_PROJECT_VERSION: "36"
+    MARKETING_VERSION: "1.12"
+    CURRENT_PROJECT_VERSION: "37"
 targets:
   WhenReset:
     type: application

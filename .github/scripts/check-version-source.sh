@@ -56,4 +56,18 @@ for value in "${build_values[@]}"; do
   fi
 done
 
-echo "Version source is project.yml: $marketing ($build). project.pbxproj matches."
+# App and widget Info.plists must inherit the project versions. A literal
+# here would ship a different number than project.yml.
+plists=(
+  "$root/WhenReset/Info.plist"
+  "$root/WhenReset/Info-Mac.plist"
+  "$root/WhenResetWidgets/Info.plist"
+)
+for plist in "${plists[@]}"; do
+  if ! grep -F -q "\$(MARKETING_VERSION)" "$plist" || ! grep -F -q "\$(CURRENT_PROJECT_VERSION)" "$plist"; then
+    echo "$plist must use \$(MARKETING_VERSION) and \$(CURRENT_PROJECT_VERSION)." >&2
+    exit 1
+  fi
+done
+
+echo "Version source is project.yml: $marketing ($build). project.pbxproj and Info.plists match."
