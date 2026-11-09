@@ -94,6 +94,9 @@ struct InterfaceGlassBackdrop: View {
 }
 
 /// Widget and Live Activity fill. Follows the same three surfaces as the app.
+/// Classic draws explicit white or black instead of `systemBackground`: a
+/// UIKit-backed color resolves against the system appearance, so a stored
+/// light or dark choice would not reach it.
 struct InterfaceWidgetBackground: View {
     @Environment(\.interfaceStyle) private var interfaceStyle
     @Environment(\.colorScheme) private var colorScheme
@@ -101,7 +104,7 @@ struct InterfaceWidgetBackground: View {
     var body: some View {
         switch interfaceStyle {
         case .classic:
-            InterfacePalette.pageBackground
+            colorScheme == .dark ? Color.black : Color.white
         case .screenTime:
             InterfacePalette.screenTimeCanvas(colorScheme)
         case .liquidGlass:

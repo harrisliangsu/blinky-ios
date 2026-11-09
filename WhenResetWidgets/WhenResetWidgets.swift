@@ -618,10 +618,10 @@ struct UsageWidget: Widget {
         AppIntentConfiguration(kind: "UsageWidget", intent: UsageWidgetConfigurationIntent.self,
                                provider: UsageWidgetProvider()) { entry in
             HomeWidgetView(entry: entry)
+                .blinkyUsageChrome()
                 .containerBackground(for: .widget) {
                     InterfaceWidgetBackground()
                 }
-                .blinkyUsageChrome()
         }
         .configurationDisplayName("Usage limits")
         .description("Choose an account, quota, and market-inspired presentation.")
@@ -2259,7 +2259,9 @@ private struct LiveActivityBackground: ViewModifier {
         case .dark:
             content.activityBackgroundTint(.black).activitySystemActionForegroundColor(.white)
         case .light:
-            content.activityBackgroundTint(Color(.systemBackground)).activitySystemActionForegroundColor(.primary)
+            // Explicit white, not systemBackground: a UIKit-backed color
+            // resolves against the system appearance, not the stored choice.
+            content.activityBackgroundTint(.white).activitySystemActionForegroundColor(.black)
         case .system:
             content
         }

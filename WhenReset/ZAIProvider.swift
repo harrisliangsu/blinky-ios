@@ -118,7 +118,8 @@ struct ZAIProvider {
 
         return LinkedIdentity(
             workspaceID: "zai-\(fingerprint)",
-            displayName: Self.providerTitle,
+            // The storefront name, so a mainland 智谱 account does not store "z.ai".
+            displayName: storefront.title,
             plan: result.snapshot.plan ?? "Coding Plan",
             credentials: result.credentials
         )
