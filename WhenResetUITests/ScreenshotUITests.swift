@@ -323,9 +323,16 @@ final class ScreenshotUITests: XCTestCase {
             choices.lifetime = .keepAlways
             add(choices)
             app.buttons[fiveHour].tap()
-            let confirm = app.descendants(matching: .any)["use-reset-card-confirm"]
+            // The confirm alert's message text keeps no accessibility
+            // identifier once hosted by the system, so the alert is matched
+            // by its title and the remaining-count check reads its message.
+            let confirmTitle = language == "zh-Hans" ? "使用重置卡" : "Use a reset card"
+            let confirm = app.alerts[confirmTitle]
             XCTAssertTrue(confirm.waitForExistence(timeout: 6))
-            XCTAssertTrue(confirm.label.contains("0"))
+            let confirmMessage = confirm.staticTexts.allElementsBoundByIndex
+                .map { $0.label }
+                .joined(separator: " ")
+            XCTAssertTrue(confirmMessage.contains("0"))
         case "usageDanger":
             let exhausted = language == "zh-Hans" ? "剩余 0%" : "0% left"
             var swipes = 0
