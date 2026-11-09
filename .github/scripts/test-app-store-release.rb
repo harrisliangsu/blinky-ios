@@ -57,6 +57,12 @@ class AppStoreReleaseSelectionTest < Minitest::Test
     assert_equal 28, AppStoreReleaseSelection.build_number([build("27.9.3"), build("26")])
   end
 
+  def test_checked_in_build_is_a_floor
+    assert_equal 37, AppStoreReleaseSelection.build_number([], floor: 37)
+    assert_equal 37, AppStoreReleaseSelection.build_number([build("14"), build("2")], floor: 37)
+    assert_equal 41, AppStoreReleaseSelection.build_number([build("40")], floor: 10)
+  end
+
   def test_untrusted_version_values_are_rejected_without_echoing_them
     ["bad-value-canary", "1.2.3.4", "1.4\nother=value", "", nil].each do |value|
       error = assert_raises(RuntimeError) { select_version(value, []) }

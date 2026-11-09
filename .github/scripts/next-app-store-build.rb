@@ -34,11 +34,13 @@ module AppStoreReleaseSelection
     [closed[0], closed[1], closed[2] + 1].join(".")
   end
 
-  def self.build_number(builds)
+  def self.build_number(builds, floor: 0)
     # macOS requires increasing build numbers across marketing versions. Query
     # every app build and choose an integer above even a previous dotted build.
+    # The checked-in CURRENT_PROJECT_VERSION is a floor, so a stale App Store
+    # Connect history cannot upload a lower number than project.yml.
     maximum = builds.map { |build| version_parts(build.fetch("attributes").fetch("version")).first }.max
-    (maximum || 0) + 1
+    [((maximum || 0) + 1), floor].max
   end
 
   def self.api_uri(path)
@@ -124,6 +126,9 @@ if $PROGRAM_NAME == __FILE__
   issuer_id = required_env("ASC_ISSUER_ID")
   bundle_id = required_env("APP_BUNDLE_ID")
   requested_version = required_env("MARKETING_VERSION")
+  checked_in_build = required_env("CURRENT_PROJECT_VERSION")
+  raise "Checked-in build is not an integer" unless checked_in_build.match?(/\A[0-9]+\z/)
+
   output_path = required_env("GITHUB_OUTPUT")
   platforms = ENV.fetch("RELEASE_PLATFORMS", "IOS").split(",")
   raise "Unsupported release platform" if platforms.empty? || (platforms - %w[IOS MAC_OS]).any?
@@ -143,11 +148,14 @@ if $PROGRAM_NAME == __FILE__
       "limit" => "200"
     )}", token
   )
-  next_build = AppStoreReleaseSelection.build_number(builds)
+  floor = checked_in_build.to_i
+  next_on_store = AppStoreReleaseSelection.build_number(builds)
+  next_build = AppStoreReleaseSelection.build_number(builds, floor: floor)
   File.open(output_path, "a") do |file|
     file.puts("marketing_version=#{marketing_version}")
     file.puts("build_number=#{next_build}")
   end
   puts "Selected App Store build #{marketing_version} (#{next_build})."
+  puts "Checked-in build #{floor} is above the next App Store Connect build #{next_on_store}; using the checked-in floor." if floor > next_on_store
   puts "The configured version is already approved; using the next patch version." if marketing_version != requested_version
 end

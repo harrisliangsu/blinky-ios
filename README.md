@@ -105,12 +105,12 @@ Push from the self-hosted server is separate. The vendored APNs key under `serve
 Release preparation reads `MARKETING_VERSION` only from `project.yml`. That file is
 the only place to bump the marketing version and build number. `xcodegen generate --spec project.yml`
 writes the same values into `WhenReset.xcodeproj/project.pbxproj`, and CI rejects a
-project file or `Config/WhenReset.xcconfig` that disagrees. The checked-in version is
-a minimum: if Apple has approved that version on a selected platform, the upload uses
-the next patch version after the latest approved release. Build numbers increase across
-all app versions and platforms, including paginated build history. The number App Store
-Connect already has can be higher than the checked-in build; the workflow still picks
-one above that. Xcode's specific unreadable cloud-signing response is retried up to
+project file or `Config/WhenReset.xcconfig` that disagrees. `CURRENT_PROJECT_VERSION`
+in that file is a build-number floor. The upload uses the greater of that floor and one
+above the highest build already on App Store Connect, across every app version and
+platform, including paginated build history. If Apple has approved the checked-in
+marketing version on a selected platform, the upload uses the next patch version after
+the latest approved release. Xcode's specific unreadable cloud-signing response is retried up to
 three times before upload; version-validation failures and potentially completed uploads
 are not retried. App Store review submission remains an explicit manual option, separate
 from TestFlight uploads.
