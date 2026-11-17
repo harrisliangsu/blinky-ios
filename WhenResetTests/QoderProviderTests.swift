@@ -89,11 +89,13 @@ final class QoderProviderTests: XCTestCase {
         XCTAssertEqual(stored.value(forHTTPHeaderField: "Authorization"), "Bearer pt-stored")
         XCTAssertNil(stored.value(forHTTPHeaderField: "Cookie"))
         XCTAssertEqual(stored.url?.host, "qoder.com")
+        XCTAssertFalse(stored.httpShouldHandleCookies)
 
         let session = try QoderProvider.usageRequest(credential: "session=abc; cna=keep", site: .china)
         XCTAssertEqual(session.value(forHTTPHeaderField: "Cookie"), "session=abc; cna=keep")
         XCTAssertNil(session.value(forHTTPHeaderField: "Authorization"))
         XCTAssertEqual(session.url?.host, "qoder.com.cn")
+        XCTAssertFalse(session.httpShouldHandleCookies)
         XCTAssertEqual(session.value(forHTTPHeaderField: "Origin"), "https://qoder.com.cn")
         XCTAssertEqual(session.value(forHTTPHeaderField: "Referer"), "https://qoder.com.cn/account/usage")
         XCTAssertEqual(session.value(forHTTPHeaderField: "Bx-V"), "2.5.35")
@@ -138,6 +140,18 @@ final class QoderProviderTests: XCTestCase {
             try cookie("qoder_csrf_token", "csrf", domain: "qoder.com"),
             try cookie("acw_tc", "waf", domain: "qoder.com"),
         ], site: .international))
+        XCTAssertThrowsError(try QoderBrowserSession.header(from: [
+            try cookie("qoder_csrf_token", "csrf", domain: "qoder.com"),
+            try cookie("acw_tc", "waf", domain: "qoder.com"),
+            try cookie("cna", "screen", domain: "qoder.com"),
+            try cookie("isg", "screen", domain: "qoder.com"),
+            try cookie("tfstk", "screen", domain: "qoder.com"),
+        ], site: .international))
+        let signedIn = try QoderBrowserSession.header(from: [
+            try cookie("cna", "screen", domain: "qoder.com"),
+            try cookie("qoder_session", "real", domain: "qoder.com"),
+        ], site: .international)
+        XCTAssertEqual(signedIn, "cna=screen; qoder_session=real")
     }
 
     func testSignedInPageIsTheAccountUsagePageForThatSite() {

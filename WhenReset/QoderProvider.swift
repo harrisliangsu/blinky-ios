@@ -81,6 +81,12 @@ enum QoderBrowserSession {
     /// when a real session cookie is present, matching Mac's deny-list.
     static let preLoginNames: Set<String> = ["qoder_csrf_token", "acw_tc"]
 
+    /// Alibaba screening cookies. Mac keeps them because dropping one refuses
+    /// a working session, and they are not the session: the account page sets
+    /// them before sign-in. Qoder does not publish the session cookie's name,
+    /// so any other host cookie is what makes this a session.
+    static let screeningNames: Set<String> = ["cna", "isg", "tfstk"]
+
     /// Host cookies for `site` only, then the same deny-list normalization
     /// the credits request uses. Cookies for the other Qoder site are dropped
     /// before normalization.
@@ -96,7 +102,8 @@ enum QoderBrowserSession {
             let name = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
             return name.trimmingCharacters(in: .whitespaces).lowercased()
         }
-        guard names.contains(where: { !preLoginNames.contains($0) }) else {
+        let unsigned = preLoginNames.union(screeningNames)
+        guard names.contains(where: { !unsigned.contains($0) }) else {
             throw QoderProvider.invalidSession()
         }
         return header
@@ -182,6 +189,9 @@ struct QoderProvider {
         request.httpMethod = "GET"
         request.timeoutInterval = 20
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        // The Cookie header below is the session. The shared cookie store must
+        // not replace it, and must not add cookies for a different site.
+        request.httpShouldHandleCookies = false
         if let token = accessToken(in: raw) {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         } else {

@@ -140,13 +140,35 @@ enum LiveActivityLifecyclePolicy {
 }
 #endif
 
+struct AccountRefreshGate: Equatable, Sendable {
+    private(set) var inFlight: Set<UUID> = []
+
+    /// Starts one refresh. A second tap while that account is in flight does not start another.
+    mutating func begin(_ accountID: UUID) -> Bool {
+        guard inFlight.insert(accountID).inserted else { return false }
+        return true
+    }
+
+    mutating func finish(_ accountID: UUID) {
+        inFlight.remove(accountID)
+    }
+}
+
 struct AccountRefreshFailure: Equatable, Sendable {
     enum Kind: Equatable, Sendable {
         case authentication
         case update
     }
 
+    enum Tone: Equatable, Sendable {
+        case network
+        case rateLimited
+        case authentication
+        case other
+    }
+
     let kind: Kind
+    let tone: Tone
     let title: String
     let message: String
     let failedAt: Date
@@ -155,7 +177,17 @@ struct AccountRefreshFailure: Equatable, Sendable {
     var systemImageName: String { requiresRelink ? "person.crop.circle.badge.exclamationmark" : "exclamationmark.triangle.fill" }
 
     init(error: Error, failedAt: Date = .now) {
-        kind = Self.requiresReauthentication(for: error) ? .authentication : .update
+        let reauthentication = Self.requiresReauthentication(for: error)
+        kind = reauthentication ? .authentication : .update
+        if reauthentication {
+            tone = .authentication
+        } else if error is URLError {
+            tone = .network
+        } else if Self.httpStatus(for: error) == 429 {
+            tone = .rateLimited
+        } else {
+            tone = .other
+        }
         self.failedAt = failedAt
         if let pushError = error as? PushServerError,
            pushError.workerErrorCode == .unauthorized {
@@ -166,10 +198,10 @@ struct AccountRefreshFailure: Equatable, Sendable {
             title = "ChatGPT blocked the Worker check"
             message = "Your ChatGPT sign-in completed, but ChatGPT rejected the quota check from this Cloudflare Worker. The new sign-in was not activated on the Worker. Try again later, or monitor this account on this device instead."
         } else if kind == .authentication {
-            title = "Sign-in failed"
-            message = "Your sign-in expired or was revoked. Sign in again to resume updates."
+            title = String.localized("Sign-in failed")
+            message = String.localized("Your sign-in expired or was revoked. Sign in again to resume updates.")
         } else {
-            title = "Update failed"
+            title = String.localized("Update failed")
             message = Self.updateMessage(for: error)
         }
     }
@@ -179,12 +211,14 @@ struct AccountRefreshFailure: Equatable, Sendable {
         switch workerSessionStatus {
         case .expired:
             kind = .authentication
-            title = "Sign-in failed"
-            message = "The Worker reports that this sign-in expired or was revoked. Sign in again to replace its encrypted credential."
+            tone = .authentication
+            title = String.localized("Sign-in failed")
+            message = String.localized("The Worker reports that this sign-in expired or was revoked. Sign in again to replace its encrypted credential.")
         case .error, .unchecked, .active:
             kind = .update
-            title = "Update failed"
-            message = "The Worker could not verify this provider session. Saved usage remains available while it retries."
+            tone = .other
+            title = String.localized("Update failed")
+            message = String.localized("The Worker could not verify this provider session. Saved usage remains available while it retries.")
         }
     }
 
@@ -194,12 +228,12 @@ struct AccountRefreshFailure: Equatable, Sendable {
             return "This account is no longer available on the self-hosted Worker."
         }
         if httpStatus(for: error) == 429 {
-            return "Updates are temporarily rate-limited. Showing the latest saved usage; Blinky will retry automatically."
+            return String.localized("Updates are temporarily rate-limited. Showing the latest saved usage; Blinky will retry automatically.")
         }
         if error is URLError {
-            return "The provider couldn’t be reached. Showing the latest saved usage; Blinky will retry automatically."
+            return String.localized("The provider couldn’t be reached. Showing the latest saved usage; Blinky will retry automatically.")
         }
-        return "The latest usage could not be loaded. Showing the latest saved usage; Blinky will retry automatically."
+        return String.localized("The latest usage could not be loaded. Showing the latest saved usage; Blinky will retry automatically.")
     }
 
     private static func httpStatus(for error: Error) -> Int? {
@@ -290,6 +324,47 @@ struct AccountRefreshFailure: Equatable, Sendable {
         let normalized = message.lowercased().replacingOccurrences(of: "_", with: " ")
         return ["invalid grant", "invalid token", "expired token", "refresh token", "unauthorized"]
             .contains { normalized.contains($0) }
+    }
+}
+
+/// What the usage card shows for a failed refresh. Removal is not one of the
+/// actions: deleting an account stays in account settings.
+struct AccountFailurePresentation: Equatable, Sendable {
+    enum Action: Equatable, Sendable {
+        case retry
+        case signIn
+    }
+
+    var summary: String
+    var detail: String
+    var action: Action
+    var showsRemoval: Bool
+    var hasCachedUsage: Bool
+
+    static func make(
+        failure: AccountRefreshFailure,
+        hasCachedUsage: Bool
+    ) -> AccountFailurePresentation {
+        let summary: String
+        switch failure.tone {
+        case .network:
+            summary = String.localized("Couldn't reach the provider.")
+        case .rateLimited:
+            summary = String.localized("Updates are rate limited.")
+        case .authentication:
+            summary = String.localized("Sign-in expired.")
+        case .other:
+            summary = failure.title == String.localized("Update failed")
+                ? String.localized("Couldn't refresh usage.")
+                : failure.title
+        }
+        return AccountFailurePresentation(
+            summary: summary,
+            detail: failure.message,
+            action: failure.requiresRelink ? .signIn : .retry,
+            showsRemoval: false,
+            hasCachedUsage: hasCachedUsage
+        )
     }
 }
 
@@ -1095,6 +1170,8 @@ final class AppStore {
     }
     private(set) var snapshots: [UUID: UsageSnapshot] = [:]
     private(set) var refreshFailures: [UUID: AccountRefreshFailure] = [:]
+    private var refreshGate = AccountRefreshGate()
+    var refreshingAccountIDs: Set<UUID> { refreshGate.inFlight }
     var isRefreshing = false
     var errorMessage: String?
     var deviceLink: DeviceLinkPresentation?
@@ -2658,6 +2735,8 @@ final class AppStore {
     func refresh(_ account: MonitoredAccount,
                  source: UsageRefreshSource = .manual,
                  publishChanges: Bool = true) async -> Bool {
+        guard refreshGate.begin(account.id) else { return false }
+        defer { refreshGate.finish(account.id) }
         switch AccountRefreshRoute(
             isDemo: account.isDemo,
             serverMonitoringEnabled: isServerMonitoringEnabled(for: account),
@@ -2871,6 +2950,8 @@ final class AppStore {
             }
             return workerCredentialReplacementSucceeded
         } catch is CancellationError {
+            return false
+        } catch let error as URLError where error.code == .cancelled {
             return false
         } catch {
             guard accounts.contains(where: { $0.id == account.id }) else { return false }
@@ -4955,6 +5036,12 @@ final class AppStore {
     }
 
     private func reconcileScheduledResetNotifications() async {
+        do {
+            try await historyStore.relabelPendingNotifications(accounts: accounts)
+            historyStorageError = nil
+        } catch {
+            historyStorageError = error.localizedDescription
+        }
         let targets = ScheduledResetNotificationPlanner.targets(
             accounts: accounts,
             snapshots: snapshots,
@@ -4979,7 +5066,8 @@ final class AppStore {
                 account: account,
                 source: source,
                 notificationsEnabled: true,
-                accountSettings: accountSettings
+                accountSettings: accountSettings,
+                roster: accounts
             )
             usageHistory = result.points
             historyStorageError = nil
@@ -5580,7 +5668,7 @@ enum ScheduledResetNotificationPlanner {
                 let target = ScheduledResetNotificationTarget(
                     identifier: identifier,
                     accountID: account.id,
-                    accountName: account.resolvedDisplayName,
+                    accountName: NotificationAccountLabel.subject(for: account, among: accounts),
                     metricID: window.metricID,
                     metricTitle: window.displayTitle,
                     cadence: cadence,
