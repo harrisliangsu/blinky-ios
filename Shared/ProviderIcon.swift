@@ -68,7 +68,7 @@ struct ProviderIcon: View {
         case .grok: .black
         case .kimi, .zai, .zhipu, .miniMax, .synthetic, .ollamaCloud, .warp, .antigravity,
              .compatibleAPI, .anthropicAPI, .newAPI, .openRouter, .fireworksAI,
-             .deepSeek, .poe: .clear
+             .deepSeek, .poe, .qoder: .clear
         case .githubCopilot: .secondary.opacity(0.12)
         }
     }
@@ -91,6 +91,7 @@ struct ProviderIcon: View {
         case .fireworksAI: .orange
         case .deepSeek: .blue
         case .poe: .indigo
+        case .qoder: Color(red: 42 / 255, green: 219 / 255, blue: 92 / 255)
         }
     }
 
@@ -101,7 +102,7 @@ struct ProviderIcon: View {
         case .claude, .anthropicAPI, .kimi, .zai, .zhipu, .grok: 0
         case .miniMax: 0.13
         case .synthetic, .ollamaCloud, .warp, .antigravity, .compatibleAPI, .newAPI,
-             .openRouter, .fireworksAI, .deepSeek, .poe: 0.2
+             .openRouter, .fireworksAI, .deepSeek, .poe, .qoder: 0.2
         }
     }
 }

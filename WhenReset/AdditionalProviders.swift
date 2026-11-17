@@ -9,6 +9,7 @@ enum AdditionalProviderError: LocalizedError {
     case invalidResponse(String)
     case noResettableQuota(String)
     case noBillingData(String)
+    case noAllowance(String)
     case invalidEndpoint
     case stateMismatch
     case responseTooLarge(String)
@@ -28,6 +29,12 @@ enum AdditionalProviderError: LocalizedError {
             "\(provider) did not report any resettable quota windows."
         case let .noBillingData(provider):
             "\(provider) did not return readable billing data."
+        case let .noAllowance(provider):
+            String(
+                format: String.localized("%@ reports no credit allowance for this account."),
+                locale: AppLanguage.current.locale,
+                provider
+            )
         case .invalidEndpoint:
             "Enter a valid HTTPS usage endpoint. Loopback HTTP is allowed for local development."
         case .stateMismatch:
@@ -928,7 +935,7 @@ struct NewAPIProvider {
     }
 }
 
-private enum AdditionalProviderParsing {
+enum AdditionalProviderParsing {
     static let maximumResponseBytes = 1_048_576
 
     static func dictionary(_ value: Any?) -> [String: Any]? {
@@ -1051,7 +1058,7 @@ private final class AdditionalProviderRedirectBlocker: NSObject, URLSessionTaskD
     }
 }
 
-private enum AdditionalProviderNetworking {
+enum AdditionalProviderNetworking {
     private static let redirectBlocker = AdditionalProviderRedirectBlocker()
 
     static func data(
@@ -2546,7 +2553,7 @@ struct CompatibleAPIProvider {
     }
 }
 
-private func pendingAccount(providerID: ProviderID, name: String) -> MonitoredAccount {
+func pendingAccount(providerID: ProviderID, name: String) -> MonitoredAccount {
     MonitoredAccount(
         id: UUID(),
         providerID: providerID,
