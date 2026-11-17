@@ -18,8 +18,8 @@ settings:
     # one above the highest build already on App Store Connect.
     SWIFT_VERSION: "6.0"
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "1.14"
-    CURRENT_PROJECT_VERSION: "39"
+    MARKETING_VERSION: "1.15"
+    CURRENT_PROJECT_VERSION: "40"
 targets:
   WhenReset:
     type: application
