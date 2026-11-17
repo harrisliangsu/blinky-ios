@@ -9696,6 +9696,120 @@
           }
         }
       }
+    },
+    "Couldn't reach the provider.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Couldn't reach the provider." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂时连不上服务。" } }
+      }
+    },
+    "Updates are rate limited.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Updates are rate limited." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "刷新过于频繁。" } }
+      }
+    },
+    "Sign-in expired.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign-in expired." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "登录已过期。" } }
+      }
+    },
+    "Couldn't refresh usage.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Couldn't refresh usage." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂时无法刷新用量。" } }
+      }
+    },
+    "No saved usage yet.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No saved usage yet." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "还没有已保存的用量。" } }
+      }
+    },
+    "Saved usage from %@.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Saved usage from %@." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已保存的用量来自 %@。" } }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Details" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "详情" } }
+      }
+    },
+    "Hide details": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hide details" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "收起详情" } }
+      }
+    },
+    "Refreshing usage…": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Refreshing usage…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在刷新用量…" } }
+      }
+    },
+    "Account": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Account" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "账号" } }
+      }
+    },
+    "Your sign-in expired or was revoked. Sign in again to resume updates.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Your sign-in expired or was revoked. Sign in again to resume updates." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "登录已过期或已被取消。重新登录后会继续更新。" } }
+      }
+    },
+    "The provider couldn’t be reached. Showing the latest saved usage; Blinky will retry automatically.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The provider couldn’t be reached. Showing the latest saved usage; Blinky will retry automatically." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂时连不上服务。正在显示最近保存的用量，Blinky 会自动重试。" } }
+      }
+    },
+    "Updates are temporarily rate-limited. Showing the latest saved usage; Blinky will retry automatically.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Updates are temporarily rate-limited. Showing the latest saved usage; Blinky will retry automatically." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "刷新暂时受到频率限制。正在显示最近保存的用量，Blinky 会自动重试。" } }
+      }
+    },
+    "The latest usage could not be loaded. Showing the latest saved usage; Blinky will retry automatically.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The latest usage could not be loaded. Showing the latest saved usage; Blinky will retry automatically." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没能读到最新用量。正在显示最近保存的用量，Blinky 会自动重试。" } }
+      }
+    },
+    "Sign-in failed": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign-in failed" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "登录失败" } }
+      }
+    },
+    "Update failed": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Update failed" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "更新失败" } }
+      }
+    },
+    "The Worker reports that this sign-in expired or was revoked. Sign in again to replace its encrypted credential.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The Worker reports that this sign-in expired or was revoked. Sign in again to replace its encrypted credential." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Worker 报告此登录已过期或已被取消。重新登录以更换它保存的加密凭据。" } }
+      }
+    },
+    "The Worker could not verify this provider session. Saved usage remains available while it retries.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The Worker could not verify this provider session. Saved usage remains available while it retries." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Worker 暂时无法确认此登录。已保存的用量仍在，它会继续重试。" } }
+      }
+    },
+    "This reads Antigravity model-pool quota, not Gemini app usage. Blinky has no Google sign-in of its own. The client ID and secret have to be an OAuth client you registered. An account already saved keeps refreshing with that client.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This reads Antigravity model-pool quota, not Gemini app usage. Blinky has no Google sign-in of its own. The client ID and secret have to be an OAuth client you registered. An account already saved keeps refreshing with that client." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "这里读取的是 Antigravity 的模型额度池，不是 Gemini 应用的用量。Blinky 没有自己的 Google 登录。客户端 ID 和密钥必须来自你注册的 OAuth 客户端。已经保存的账号会继续用那个客户端刷新。" } }
+      }
     }
   },
   "version": "1.0"

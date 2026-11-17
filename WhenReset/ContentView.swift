@@ -241,23 +241,26 @@ private struct UsageTabView: View {
                                 failure: failure,
                                 openSettings: { settingsAccount = account }
                             )
-                            if let failure {
+                            if store.refreshingAccountIDs.contains(account.id) {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                    Text("Refreshing usage…")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .accessibilityIdentifier("account-refresh-progress-\(account.id.uuidString)")
+                            } else if let failure {
                                 AccountFailureView(
-                                    account: account,
                                     failure: failure,
                                     cachedAt: snapshot?.fetchedAt,
                                     retry: { Task { await store.refresh(account) } },
-                                    relink: { relinkingAccount = account },
-                                    remove: { accountPendingRemoval = account }
+                                    relink: { relinkingAccount = account }
                                 )
                             }
                             if let snapshot {
                                 UsageCard(snapshot: snapshot.filtered(using: store.settings(for: account)))
-                            } else if failure == nil {
+                            } else if failure == nil && !store.refreshingAccountIDs.contains(account.id) {
                                 HStack { ProgressView(); Text("Loading usage…").foregroundStyle(.secondary) }
-                            } else {
-                                Label("No cached usage is available", systemImage: "tray")
-                                    .foregroundStyle(.secondary)
                             }
                         }
                         .modifier(UsageAccountChrome(style: interfaceStyle))
@@ -509,96 +512,82 @@ private struct ProviderSectionHeader: View {
 }
 
 private struct AccountFailureView: View {
-    let account: MonitoredAccount
     let failure: AccountRefreshFailure
     let cachedAt: Date?
     let retry: () -> Void
     let relink: () -> Void
-    let remove: () -> Void
-
-    private var isExpiredWorkerSession: Bool {
-        failure == AccountRefreshFailure(
-            workerSessionStatus: .expired,
-            checkedAt: failure.failedAt
-        )
-    }
-
-    private var isWorkerSessionCheckFailure: Bool {
-        failure == AccountRefreshFailure(
-            workerSessionStatus: .error,
-            checkedAt: failure.failedAt
-        )
-    }
-
-    private var title: String {
-        if isExpiredWorkerSession { return "Worker sign-in expired" }
-        if isWorkerSessionCheckFailure { return "Worker session check failed" }
-        return failure.title
-    }
-
-    private var message: String {
-        if isExpiredWorkerSession {
-            return "Cloud quota refresh has stopped for this account. Reconnect the provider sign-in to resume Worker updates."
-        }
-        return failure.message
-    }
-
-    private var tint: Color {
-        failure.requiresRelink ? .red : .orange
-    }
+    @State private var showsDetail = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: failure.systemImageName)
-                .font(.headline)
-                .foregroundStyle(tint)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            if isExpiredWorkerSession {
-                Text("Worker reported this \(failure.failedAt, style: .relative).")
+        let presentation = AccountFailurePresentation.make(
+            failure: failure,
+            hasCachedUsage: cachedAt != nil
+        )
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: failure.systemImageName)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if let cachedAt {
-                Text("Showing the latest saved usage from \(cachedAt, style: .relative).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            HStack(spacing: 10) {
-                if isExpiredWorkerSession {
-                    Button(
-                        "Reconnect now",
-                        systemImage: "arrow.triangle.2.circlepath",
-                        action: relink
-                    )
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
-                        .accessibilityHint("Opens the sign-in flow to resume Worker quota refresh")
-                } else if failure.requiresRelink,
-                   !account.isRemoteOnly || account.providerID == .chatGPT {
-                    Button(
-                        account.isRemoteOnly ? "Update Worker sign-in" : "Sign in again",
-                        systemImage: "arrow.triangle.2.circlepath",
-                        action: relink
-                    )
-                        .buttonStyle(.borderedProminent)
-                } else {
-                    Button("Try again", systemImage: "arrow.clockwise", action: retry)
-                        .buttonStyle(.borderedProminent)
+                    .foregroundStyle(failure.requiresRelink ? Color.red : Color.orange)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(presentation.summary)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    cacheLine
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                Button("Remove", systemImage: "trash", role: .destructive, action: remove)
-                    .buttonStyle(.bordered)
+                Spacer(minLength: 8)
+                actionButton(presentation)
             }
-            .controlSize(.regular)
-        }
-        .padding(12)
-        .background(tint.opacity(0.08), in: .rect(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(tint.opacity(0.24), lineWidth: 1)
+            Button(showsDetail ? "Hide details" : "Details") {
+                showsDetail.toggle()
+            }
+            .font(.caption)
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            if showsDetail {
+                Text(presentation.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
         }
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var cacheLine: some View {
+        if let cachedAt {
+            Text(String(
+                format: String.localized("Saved usage from %@."),
+                locale: AppLanguage.current.locale,
+                relative(cachedAt)
+            ))
+        } else {
+            Text(String.localized("No saved usage yet."))
+        }
+    }
+
+    private func relative(_ date: Date) -> String {
+        date.formatted(.relative(presentation: .named).locale(AppLanguage.current.locale))
+    }
+
+    @ViewBuilder
+    private func actionButton(_ presentation: AccountFailurePresentation) -> some View {
+        switch presentation.action {
+        case .retry:
+            Button("Try again", action: retry)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        case .signIn:
+            Button("Sign in again", action: relink)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
     }
 }
 

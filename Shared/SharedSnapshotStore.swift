@@ -183,6 +183,9 @@ struct UsageNotificationEvent: Codable, Hashable, Identifiable, Sendable {
     var title: String
     var body: String
     var createdAt: Date
+    /// Present for notifications this version created, so a later roster
+    /// change can redraw the subject without keeping the old name.
+    var recipe: UsageNotificationRecipe?
     fileprivate var deduplicationKey: String
 }
 
@@ -360,6 +363,7 @@ actor UsageHistoryStore {
     func record(snapshot: UsageSnapshot, account: MonitoredAccount,
                 source: UsageRefreshSource, notificationsEnabled: Bool = true,
                 accountSettings: AccountMonitorSettings = .init(),
+                roster: [MonitoredAccount] = [],
                 now: Date = .now) throws -> UsageHistoryRecordResult {
         var archive = try loadedArchive()
         prune(&archive, now: now)
@@ -436,9 +440,11 @@ actor UsageHistoryStore {
         }
 
         if !account.isDemo {
+            let notificationRoster = roster.isEmpty ? [account] : roster
             updateResetDetector(
                 snapshot: snapshot,
                 account: account,
+                subject: NotificationAccountLabel.subject(for: account, among: notificationRoster),
                 points: actualPoints,
                 notificationsEnabled: notificationsEnabled,
                 archive: &archive
@@ -468,6 +474,35 @@ actor UsageHistoryStore {
             .filter { $0.accountID == accountID }
             .map(\.id))
         try markNotificationsDelivered(ids, now: now)
+    }
+
+    /// Redraws notifications that have not been delivered yet. Adding,
+    /// renaming, or removing an account changes whether the subject is the
+    /// provider alone or the provider plus a label.
+    func relabelPendingNotifications(accounts: [MonitoredAccount], now: Date = .now) throws {
+        var archive = try loadedArchive()
+        prune(&archive, now: now)
+        var changed = false
+        let kept = archive.pendingNotifications.compactMap { event -> UsageNotificationEvent? in
+            guard let account = accounts.first(where: { $0.id == event.accountID }) else {
+                changed = true
+                return nil
+            }
+            guard let recipe = event.recipe else { return event }
+            let subject = NotificationAccountLabel.subject(for: account, among: accounts)
+            var updated = event
+            updated.title = recipe.title(subject: subject)
+            updated.body = recipe.body(subject: subject)
+            if updated != event { changed = true }
+            return updated
+        }
+        guard changed else {
+            cachedArchive = archive
+            return
+        }
+        archive.pendingNotifications = kept
+        try persist(archive)
+        cachedArchive = archive
     }
 
     func remove(accountID: UUID, now: Date = .now) throws -> [UsageHistoryPoint] {
@@ -628,6 +663,7 @@ actor UsageHistoryStore {
     }
 
     private func updateResetDetector(snapshot: UsageSnapshot, account: MonitoredAccount,
+                                     subject: String,
                                      points: [UsageHistoryPoint], notificationsEnabled: Bool,
                                      archive: inout UsageHistoryArchive) {
         let observedAt = snapshot.fetchedAt
@@ -662,12 +698,12 @@ actor UsageHistoryStore {
         }
         guard observedAt > state.lastObservedAt else { return }
 
-        let accountName = account.resolvedDisplayName
         let notifyingIDs = Set(snapshot.usageWindows.filter(\.showsCountdown).map(\.metricID))
         detectQuotaResets(
             previousPoints: state.metricObservations,
             currentPoints: points.filter { notifyingIDs.contains($0.metricID) },
             account: account,
+            subject: subject,
             sourceIdentity: sourceIdentity,
             observedAt: observedAt,
             notificationsEnabled: notificationsEnabled,
@@ -692,15 +728,19 @@ actor UsageHistoryStore {
             enqueue(
                 kind: .newBankedReset,
                 accountID: account.id,
-                title: count == 1
-                    ? String.localized("New banked reset available")
-                    : String.localized("New banked resets available"),
-                body: count == 1
-                    ? UsageNotificationCopy.format("A new banked reset was added to %@.", accountName)
-                    : UsageNotificationCopy.format(
-                        "%lld new banked resets were added to %@.",
-                        Int64(count),
-                        accountName
+                subject: subject,
+                recipe: count == 1
+                    ? UsageNotificationRecipe(
+                        titleKey: "New banked reset available",
+                        titleArguments: [],
+                        bodyKey: "A new banked reset was added to %@.",
+                        bodyArguments: [.subject]
+                    )
+                    : UsageNotificationRecipe(
+                        titleKey: "New banked resets available",
+                        titleArguments: [],
+                        bodyKey: "%lld new banked resets were added to %@.",
+                        bodyArguments: [.integer(Int64(count)), .subject]
                     ),
                 createdAt: observedAt,
                 deduplicationKey: "new-credit:\(sourceIdentity):\(newlySeen.map(\.id).sorted().joined(separator: ","))",
@@ -713,11 +753,12 @@ actor UsageHistoryStore {
             enqueue(
                 kind: .newBankedReset,
                 accountID: account.id,
-                title: String.localized("Banked resets increased"),
-                body: UsageNotificationCopy.format(
-                    "%@ now has %lld banked resets available.",
-                    accountName,
-                    Int64(snapshot.availableResetCount)
+                subject: subject,
+                recipe: UsageNotificationRecipe(
+                    titleKey: "Banked resets increased",
+                    titleArguments: [],
+                    bodyKey: "%@ now has %lld banked resets available.",
+                    bodyArguments: [.subject, .integer(Int64(snapshot.availableResetCount))]
                 ),
                 createdAt: observedAt,
                 deduplicationKey: "credit-count:\(sourceIdentity):\(previousCount):\(snapshot.availableResetCount):\(observationMilliseconds(observedAt))",
@@ -730,11 +771,12 @@ actor UsageHistoryStore {
                 enqueue(
                     kind: .newBankedReset,
                     accountID: account.id,
-                    title: String.localized("Banked resets increased"),
-                    body: UsageNotificationCopy.format(
-                        "%@ now has %lld banked resets available.",
-                        accountName,
-                        Int64(snapshot.availableResetCount)
+                    subject: subject,
+                    recipe: UsageNotificationRecipe(
+                        titleKey: "Banked resets increased",
+                        titleArguments: [],
+                        bodyKey: "%@ now has %lld banked resets available.",
+                        bodyArguments: [.subject, .integer(Int64(snapshot.availableResetCount))]
                     ),
                     createdAt: observedAt,
                     deduplicationKey: "credit-baseline-count:\(sourceIdentity):\(previousCount):\(snapshot.availableResetCount):\(observationMilliseconds(observedAt))",
@@ -796,12 +838,12 @@ actor UsageHistoryStore {
             enqueue(
                 kind: .probableEarlyWeeklyReset,
                 accountID: account.id,
-                title: String.localized("Weekly limit reset early"),
-                body: UsageNotificationCopy.format(
-                    "%@’s weekly allowance increased from %lld%% to %lld%% before its scheduled reset. A banked reset was probably applied.",
-                    accountName,
-                    Int64(previousValue),
-                    Int64(currentValue)
+                subject: subject,
+                recipe: UsageNotificationRecipe(
+                    titleKey: "Weekly limit reset early",
+                    titleArguments: [],
+                    bodyKey: "%@’s weekly allowance increased from %lld%% to %lld%% before its scheduled reset. A banked reset was probably applied.",
+                    bodyArguments: [.subject, .integer(Int64(previousValue)), .integer(Int64(currentValue))]
                 ),
                 createdAt: observedAt,
                 deduplicationKey: "early-weekly:\(sourceIdentity):\(cycleBucket(recovery.previousResetAt))",
@@ -834,7 +876,8 @@ actor UsageHistoryStore {
 
     private func detectQuotaResets(previousPoints: [String: UsageHistoryPoint],
                                    currentPoints: [UsageHistoryPoint],
-                                   account: MonitoredAccount, sourceIdentity: String,
+                                   account: MonitoredAccount, subject: String,
+                                   sourceIdentity: String,
                                    observedAt: Date, notificationsEnabled: Bool,
                                    archive: inout UsageHistoryArchive) {
         var scheduledResets: [(previous: UsageHistoryPoint, current: UsageHistoryPoint)] = []
@@ -889,23 +932,23 @@ actor UsageHistoryStore {
             let cycleIDs = scheduledResets.map {
                 "\($0.current.metricID):\(resetIdentity($0.current.resetsAt))"
             }.sorted()
+            let remaining = Int64(scheduledResets[0].current.remainingPercent.rounded())
             enqueue(
                 kind: .quotaReset,
                 accountID: account.id,
-                title: titles.count == 1
-                    ? UsageNotificationCopy.format("%@ reset", titles[0])
-                    : String.localized("Usage limits reset"),
-                body: titles.count == 1
-                    ? UsageNotificationCopy.format(
-                        "%1$@’s %2$@ started a new period with %3$lld%% remaining.",
-                        account.resolvedDisplayName,
-                        titles[0],
-                        Int64(scheduledResets[0].current.remainingPercent.rounded())
+                subject: subject,
+                recipe: titles.count == 1
+                    ? UsageNotificationRecipe(
+                        titleKey: "%@ reset",
+                        titleArguments: [.text(titles[0])],
+                        bodyKey: "%1$@’s %2$@ started a new period with %3$lld%% remaining.",
+                        bodyArguments: [.subject, .text(titles[0]), .integer(remaining)]
                     )
-                    : UsageNotificationCopy.format(
-                        "%1$@’s usage limits started new periods: %2$@.",
-                        account.resolvedDisplayName,
-                        values.joined(separator: ", ")
+                    : UsageNotificationRecipe(
+                        titleKey: "Usage limits reset",
+                        titleArguments: [],
+                        bodyKey: "%1$@’s usage limits started new periods: %2$@.",
+                        bodyArguments: [.subject, .text(values.joined(separator: ", "))]
                     ),
                 createdAt: observedAt,
                 deduplicationKey: "quota-reset:\(account.id.uuidString.lowercased()):\(cycleIDs.joined(separator: ","))",
@@ -930,14 +973,20 @@ actor UsageHistoryStore {
             enqueue(
                 kind: .probableEarlyReset,
                 accountID: account.id,
-                title: titles.count == 1
-                    ? UsageNotificationCopy.format("%@ probably reset", titles[0])
-                    : String.localized("Usage limits probably reset"),
-                body: UsageNotificationCopy.format(
-                    "%1$@’s remaining allowance increased before the scheduled reset: %2$@. A reset was probably applied.",
-                    account.resolvedDisplayName,
-                    changes.joined(separator: ", ")
-                ),
+                subject: subject,
+                recipe: titles.count == 1
+                    ? UsageNotificationRecipe(
+                        titleKey: "%@ probably reset",
+                        titleArguments: [.text(titles[0])],
+                        bodyKey: "%1$@’s remaining allowance increased before the scheduled reset: %2$@. A reset was probably applied.",
+                        bodyArguments: [.subject, .text(changes.joined(separator: ", "))]
+                    )
+                    : UsageNotificationRecipe(
+                        titleKey: "Usage limits probably reset",
+                        titleArguments: [],
+                        bodyKey: "%1$@’s remaining allowance increased before the scheduled reset: %2$@. A reset was probably applied.",
+                        bodyArguments: [.subject, .text(changes.joined(separator: ", "))]
+                    ),
                 createdAt: observedAt,
                 deduplicationKey: "early-quota-reset:\(account.id.uuidString.lowercased()):\(cycleIDs.joined(separator: ","))",
                 notificationsEnabled: notificationsEnabled,
@@ -957,8 +1006,9 @@ actor UsageHistoryStore {
     }
 
     private func enqueue(kind: UsageNotificationEvent.Kind, accountID: UUID,
-                         title: String, body: String, createdAt: Date,
-                         deduplicationKey: String, notificationsEnabled: Bool,
+                         subject: String, recipe: UsageNotificationRecipe,
+                         createdAt: Date, deduplicationKey: String,
+                         notificationsEnabled: Bool,
                          archive: inout UsageHistoryArchive) {
         guard notificationsEnabled else { return }
         guard archive.notificationDeduplicationKeys[deduplicationKey] == nil else { return }
@@ -966,9 +1016,10 @@ actor UsageHistoryStore {
             id: UUID().uuidString,
             accountID: accountID,
             kind: kind,
-            title: title,
-            body: body,
+            title: recipe.title(subject: subject),
+            body: recipe.body(subject: subject),
             createdAt: createdAt,
+            recipe: recipe,
             deduplicationKey: deduplicationKey
         )
         archive.notificationDeduplicationKeys[deduplicationKey] = createdAt

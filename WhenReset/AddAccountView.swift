@@ -725,6 +725,7 @@ struct AddAccountView: View {
     private var antigravityLinker: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Experimental: enter the installed-app OAuth configuration used by your Antigravity setup, then sign in with Google. It is stored in Keychain with your tokens and is never included in Blinky’s source or sent to its Worker.")
+            Text("This reads Antigravity model-pool quota, not Gemini app usage. Blinky has no Google sign-in of its own. The client ID and secret have to be an OAuth client you registered. An account already saved keeps refreshing with that client.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             TextField("OAuth client ID", text: $antigravityClientID)
