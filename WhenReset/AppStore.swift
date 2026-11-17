@@ -2359,12 +2359,12 @@ final class AppStore {
 
     @discardableResult
     func addQoderAccount(
-        credential: String,
+        session: String,
         site: QoderSite,
         replacing relinkingAccount: MonitoredAccount? = nil
     ) async -> Bool {
         await addLinkedIdentity(providerID: .qoder, replacing: relinkingAccount) {
-            try await self.qoderProvider.link(credential: credential, site: site)
+            try await self.qoderProvider.link(session: session, site: site)
         }
     }
 

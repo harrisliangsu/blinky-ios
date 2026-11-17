@@ -8,6 +8,10 @@ Blinky is Harris Liang's fork of upstream [When Reset (iebb/when-reset)](https:/
 
 Grok weekly-pool behavior (device-code scopes, `x-xai-token-auth: xai-grok-cli`, `/v1/billing?format=credits`, `/v1/settings`, and the implicit-zero percentage rule) was checked against [qunqin24/Pulse](https://github.com/qunqin24/Pulse) `Docs/providers/grok.md` and `Sources/Pulse/Providers/GrokUsageService.swift`. Pulse is Apache-2.0. This fork does not copy Pulse source.
 
+## Qoder mark
+
+The Qoder provider glyph is the `qoder` icon from [lobe-icons](https://github.com/lobehub/lobe-icons) (MIT). Blinky Mac ships the same paths at `Sources/Pulse/Resources/qoder.svg`. The asset catalog renders it as a template and tints it with Qoder’s brand green, `#2ADB5C`.
+
 ## CodexBar Grok provider icon
 
 The Grok provider SVG is adapted from CodexBar.

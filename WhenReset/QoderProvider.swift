@@ -27,6 +27,11 @@ enum QoderSite: String, CaseIterable, Identifiable, Sendable {
 
     var accountPage: URL { URL(string: "\(origin)/account/usage")! }
 
+    /// Where the in-app browser starts. A signed-out visit is redirected by
+    /// the site to `/users/sign-in?oauth_callback=<account page>`. Opening the
+    /// account page, rather than inventing a callback, is what Mac documents.
+    var signInURL: URL { accountPage }
+
     static func preferred(locale: Locale) -> QoderSite {
         let region = locale.region?.identifier.uppercased() ?? ""
         if region == "CN" || region == "CHN" { return .china }
@@ -37,16 +42,78 @@ enum QoderSite: String, CaseIterable, Identifiable, Sendable {
         if value == QoderSite.china.rawValue || value == QoderSite.china.host { return .china }
         return .international
     }
+
+    /// The host, its dot-form, and its subdomains. `qoder.com` does not own
+    /// `qoder.com.cn`: the test is equality or a `.host` suffix, the same
+    /// boundary Blinky Mac uses when it reads a browser cookie jar.
+    static func owns(host candidate: String, site: QoderSite) -> Bool {
+        let host = site.host.lowercased()
+        let domain = candidate.lowercased()
+        return domain == host || domain == ".\(host)" || domain.hasSuffix(".\(host)")
+    }
+
+    /// A session from one site is never kept for the other. Mac clears the
+    /// saved session when the site setting changes; the add-account picker
+    /// does the same before a new browser sign-in can be saved.
+    static func retainedSession(_ session: String?, from previous: QoderSite, to site: QoderSite) -> String? {
+        previous == site ? session : nil
+    }
+}
+
+/// Cookies taken from the in-app browser after the account page loads.
+enum QoderBrowserSession {
+    /// Signed-in means the main frame is this site's account usage page.
+    /// The sign-in URL carries that page only as `oauth_callback`, which is
+    /// not a session. Pre-login cookies (`qoder_csrf_token`, `acw_tc`) are
+    /// already on the sign-in response, so the URL is the signal, not the
+    /// mere presence of a cookie.
+    static func isSignedInAccountPage(_ url: URL, site: QoderSite) -> Bool {
+        guard url.scheme?.lowercased() == "https",
+              let host = url.host,
+              QoderSite.owns(host: host, site: site) else { return false }
+        var path = url.path
+        if path.count > 1, path.hasSuffix("/") { path.removeLast() }
+        return path == "/account/usage"
+    }
+
+    /// Names set on the sign-in response before anyone has an account session.
+    /// A header made only of these is not a sign-in. They are still forwarded
+    /// when a real session cookie is present, matching Mac's deny-list.
+    static let preLoginNames: Set<String> = ["qoder_csrf_token", "acw_tc"]
+
+    /// Host cookies for `site` only, then the same deny-list normalization
+    /// the credits request uses. Cookies for the other Qoder site are dropped
+    /// before normalization.
+
+    static func header(from cookies: [HTTPCookie], site: QoderSite) throws -> String {
+        let pairs = cookies.compactMap { cookie -> String? in
+            guard QoderSite.owns(host: cookie.domain, site: site) else { return nil }
+            guard !cookie.name.isEmpty, !cookie.value.isEmpty else { return nil }
+            return "\(cookie.name)=\(cookie.value)"
+        }
+        let header = try QoderProvider.sessionCredential(pairs.joined(separator: "; "))
+        let names = header.split(separator: ";").map { pair -> String in
+            let name = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+            return name.trimmingCharacters(in: .whitespaces).lowercased()
+        }
+        guard names.contains(where: { !preLoginNames.contains($0) }) else {
+            throw QoderProvider.invalidSession()
+        }
+        return header
+    }
 }
 
 /// Qoder credits, read the way the account usage page reads them.
 ///
-/// `GET https://{site}/api/v2/me/usages/big_model_credits` with either a personal
-/// token (`pt-` / `jt-`, `Authorization: Bearer`) or the site's session cookie.
-/// Blinky Mac and CodexBar use this same account-page route. The reply's
-/// `totalQuota` is the account allowance and `sharedQuota` is a team pool.
-/// `nextResetAt` is shown only while it is still ahead. The reply does not
-/// state a window length, and a team pool is not given that reset.
+/// `GET https://{site}/api/v2/me/usages/big_model_credits` with the site's
+/// session cookie. Blinky Mac and CodexBar use this same account-page route.
+/// The reply's `totalQuota` is the account allowance and `sharedQuota` is a
+/// team pool. `nextResetAt` is shown only while it is still ahead. The reply
+/// does not state a window length, and a team pool is not given that reset.
+///
+/// New accounts sign in through the in-app browser. A `pt-` / `jt-` token is
+/// not a way to connect. A token already stored from an older paste is still
+/// sent as a bearer on refresh, until that account signs in again.
 struct QoderProvider {
     private let session: URLSession
 
@@ -54,8 +121,8 @@ struct QoderProvider {
         self.session = session
     }
 
-    func link(credential rawCredential: String, site: QoderSite) async throws -> LinkedIdentity {
-        let credential = try Self.credential(rawCredential)
+    func link(session rawSession: String, site: QoderSite) async throws -> LinkedIdentity {
+        let credential = try Self.sessionCredential(rawSession)
         let account = pendingAccount(providerID: .qoder, name: "Qoder")
         let snapshot = try await fetchUsage(
             account: account,
@@ -82,29 +149,7 @@ struct QoderProvider {
 
     func fetchUsage(account: MonitoredAccount, credentials: AccountCredentials) async throws -> UsageSnapshot {
         let site = QoderSite.stored(credentials.serviceRegion ?? credentials.serviceHost)
-        let credential = try Self.credential(credentials.accessToken)
-        let token = Self.accessToken(in: credential)
-        var request = URLRequest(url: site.usageURL)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 20
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        if let token {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue(try Self.normalizedCookie(credential), forHTTPHeaderField: "Cookie")
-        }
-        request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "Accept")
-        request.setValue(site.origin, forHTTPHeaderField: "Origin")
-        request.setValue(site.accountPage.absoluteString, forHTTPHeaderField: "Referer")
-        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
-        // The account page sends this bot-screening header. Readers of this
-        // route, including Blinky Mac, send the same value.
-        request.setValue("2.5.35", forHTTPHeaderField: "Bx-V")
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                + "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-            forHTTPHeaderField: "User-Agent"
-        )
+        let request = try Self.usageRequest(credential: credentials.accessToken, site: site)
         let (data, response) = try await AdditionalProviderNetworking.data(
             for: request, session: session, provider: "Qoder"
         )
@@ -121,17 +166,55 @@ struct QoderProvider {
         return try Self.parseUsage(account: account, data: data, now: .now)
     }
 
-    static func credential(_ rawValue: String) throws -> String {
+    /// A browser session for a new connection. A pasted personal token is
+    /// rejected here; the add-account screen has no field for one.
+    static func sessionCredential(_ rawValue: String) throws -> String {
         let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if accessToken(in: value) != nil { return value }
+        if accessToken(in: value) != nil { throw invalidSession() }
         return try normalizedCookie(value)
     }
 
-    /// A console personal token. Anything else is treated as a cookie header.
+    /// The credits request Mac sends. A stored `pt-` / `jt-` token is still a
+    /// bearer so an account saved before browser sign-in can refresh. A new
+    /// session is always a cookie header.
+    static func usageRequest(credential raw: String, site: QoderSite) throws -> URLRequest {
+        var request = URLRequest(url: site.usageURL)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        if let token = accessToken(in: raw) {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue(try normalizedCookie(raw), forHTTPHeaderField: "Cookie")
+        }
+        request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "Accept")
+        request.setValue(site.origin, forHTTPHeaderField: "Origin")
+        request.setValue(site.accountPage.absoluteString, forHTTPHeaderField: "Referer")
+        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
+        // The account page sends this bot-screening header. Readers of this
+        // route, including Blinky Mac, send the same value.
+        request.setValue("2.5.35", forHTTPHeaderField: "Bx-V")
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                + "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+        return request
+    }
+
+    /// A console personal token already stored on this device. Not accepted
+    /// as a new sign-in.
     static func accessToken(in raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.hasPrefix("pt-") || trimmed.hasPrefix("jt-") { return trimmed }
         return nil
+    }
+
+    static func invalidSession() -> AdditionalProviderError {
+        .invalidCredential(
+            "Qoder",
+            String.localized("Sign in to Qoder in the browser again. Blinky could not read a session for this site.")
+        )
     }
 
     /// Keeps the host's own cookies and drops third-party analytics names.
@@ -139,20 +222,14 @@ struct QoderProvider {
     /// carry the site's own screening, and dropping them refuses a working session.
     static func normalizedCookie(_ input: String) throws -> String {
         guard !input.unicodeScalars.contains(where: { $0.value < 32 || $0.value > 126 }) else {
-            throw AdditionalProviderError.invalidCredential(
-                "Qoder",
-                String.localized("Paste a Qoder personal token or the Cookie header from the usage page.")
-            )
+            throw invalidSession()
         }
         var header = input.trimmingCharacters(in: .whitespaces)
         if header.lowercased().hasPrefix("cookie:") {
             header = String(header.dropFirst("cookie:".count)).trimmingCharacters(in: .whitespaces)
         }
         guard !header.isEmpty, header.utf8.count <= 32_768 else {
-            throw AdditionalProviderError.invalidCredential(
-                "Qoder",
-                String.localized("Paste a Qoder personal token or the Cookie header from the usage page.")
-            )
+            throw invalidSession()
         }
         let analytics = [
             "_ga", "_gid", "_gat", "_gcl", "_fbp", "_fbc", "_clck", "_clsk", "_hj",
@@ -173,12 +250,7 @@ struct QoderProvider {
             guard seen.insert(name).inserted else { continue }
             kept.append("\(name)=\(value)")
         }
-        guard !kept.isEmpty else {
-            throw AdditionalProviderError.invalidCredential(
-                "Qoder",
-                String.localized("Paste a Qoder personal token or the Cookie header from the usage page.")
-            )
-        }
+        guard !kept.isEmpty else { throw invalidSession() }
         return kept.joined(separator: "; ")
     }
 

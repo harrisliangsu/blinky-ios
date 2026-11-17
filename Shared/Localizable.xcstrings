@@ -9217,18 +9217,18 @@
         }
       }
     },
-    "Paste a Qoder personal token or the Cookie header from the usage page.": {
+    "Sign in to Qoder in the browser again. Blinky could not read a session for this site.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste a Qoder personal token or the Cookie header from the usage page."
+            "value": "Sign in to Qoder in the browser again. Blinky could not read a session for this site."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请粘贴 Qoder 个人令牌，或用量页的 Cookie。"
+            "value": "请在浏览器中重新登录 Qoder。Blinky 未能读取该站点的会话。"
           }
         }
       }
@@ -9345,50 +9345,50 @@
         }
       }
     },
-    "Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own.": {
+    "Sign in to the site you pick. Blinky opens it in the app and keeps that site’s session on this device. Blinky reads only that site’s credit allowance. A reset time appears only when nextResetAt is still ahead, and team credits are a separate row with no reset of their own.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own."
+            "value": "Sign in to the site you pick. Blinky opens it in the app and keeps that site’s session on this device. Blinky reads only that site’s credit allowance. A reset time appears only when nextResetAt is still ahead, and team credits are a separate row with no reset of their own."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从 Qoder 账号集成页粘贴个人令牌（以 pt- 或 jt- 开头），或从所选站点的用量页粘贴 Cookie。Blinky 只读取该站点的积分额度。只有 nextResetAt 仍在将来时才显示重置时间。团队积分单独一行，本身没有重置时间。"
+            "value": "登录所选站点。Blinky 在应用内打开它，并把该站点的会话保存在本机。Blinky 只读取该站点的积分额度。只有 nextResetAt 仍在将来时才显示重置时间。团队积分单独一行，本身没有重置时间。"
           }
         }
       }
     },
-    "Personal token or Cookie header": {
+    "Sign in with the browser": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Personal token or Cookie header"
+            "value": "Sign in with the browser"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "个人令牌或 Cookie"
+            "value": "在浏览器中登录"
           }
         }
       }
     },
-    "Connect Qoder": {
+    "Sign in to Qoder": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connect Qoder"
+            "value": "Sign in to Qoder"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "连接 Qoder"
+            "value": "登录 Qoder"
           }
         }
       }
@@ -9617,50 +9617,50 @@
         }
       }
     },
-    "this account’s Qoder token or session cookie": {
+    "this account’s Qoder session": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "this account’s Qoder token or session cookie"
+            "value": "this account’s Qoder session"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此账号的 Qoder 令牌或会话 Cookie"
+            "value": "此账号的 Qoder 会话"
           }
         }
       }
     },
-    "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own.": {
+    "Sign in on this page first. Blinky continues when the account usage page opens.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own."
+            "value": "Sign in on this page first. Blinky continues when the account usage page opens."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "粘贴 Qoder 个人令牌（pt- 或 jt-）或所选站点用量页的 Cookie。Blinky 只读取该站点的积分额度。nextResetAt 仍在将来时才显示重置。团队积分本身没有重置时间。"
+            "value": "请先在此页登录。打开账号用量页后，Blinky 会继续。"
           }
         }
       }
     },
-    "Qoder token or session stays on this device": {
+    "Qoder session stays on this device": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qoder token or session stays on this device"
+            "value": "Qoder session stays on this device"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qoder 令牌或会话保留在本机"
+            "value": "Qoder 会话保留在本机"
           }
         }
       }

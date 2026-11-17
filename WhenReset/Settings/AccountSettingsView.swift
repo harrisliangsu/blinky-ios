@@ -436,7 +436,7 @@ struct AccountSettingsView: View {
              .deepSeek, .poe:
             "this account’s API key"
         case .qoder:
-            "this account’s Qoder token or session cookie"
+            "this account’s Qoder session"
         case .openAIAPI, .anthropicAPI:
             "this account’s organization Admin API key and optional monthly budget"
         case .githubCopilot:

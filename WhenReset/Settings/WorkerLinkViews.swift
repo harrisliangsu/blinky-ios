@@ -267,7 +267,7 @@ struct WorkerLinkReviewView: View {
              .deepSeek, .poe:
             "API key"
         case .qoder:
-            "Qoder token or session stays on this device"
+            "Qoder session stays on this device"
         case .openAIAPI, .anthropicAPI:
             "Organization Admin API key"
         case .githubCopilot:

@@ -32,8 +32,8 @@ struct AddAccountView: View {
     @State private var newAPIKey = ""
     @State private var mainstreamAPIKey = ""
     @State private var fireworksAccountID = ""
-    @State private var qoderCredential = ""
     @State private var qoderSite: QoderSite = .international
+    @State private var qoderBrowser: QoderBrowserRequest?
     @State private var didApplyQoderSiteDefault = false
     @State private var providerQuery = ""
     @State private var isAddingDemo = false
@@ -110,6 +110,20 @@ struct AddAccountView: View {
                 Task { await loadRemoteWorkerAccountsMissingLocally() }
             }) {
                 RemoteWorkerAccountsView(onlyAccountsMissingLocally: true)
+            }
+            .sheet(item: $qoderBrowser) { request in
+                QoderBrowserSignInView(site: request.site) { captured in
+                    let site = qoderSite
+                    qoderBrowser = nil
+                    guard let session = QoderSite.retainedSession(captured, from: request.site, to: site) else { return }
+                    completionTask = Task {
+                        if await store.addQoderAccount(session: session, site: site, replacing: relinkingAccount) {
+                            dismiss()
+                        }
+                    }
+                } onCancel: {
+                    qoderBrowser = nil
+                }
             }
             .task(id: remoteWorkerImportRefreshID) {
                 await loadRemoteWorkerAccountsMissingLocally()
@@ -482,7 +496,7 @@ struct AddAccountView: View {
 
     private var qoderLinker: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own.")
+            Text("Sign in to the site you pick. Blinky opens it in the app and keeps that site’s session on this device. Blinky reads only that site’s credit allowance. A reset time appears only when nextResetAt is still ahead, and team credits are a separate row with no reset of their own.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Picker("Site", selection: $qoderSite) {
@@ -491,25 +505,20 @@ struct AddAccountView: View {
                 }
             }
             .pickerStyle(.segmented)
-            providerSecretField("Personal token or Cookie header", text: $qoderCredential)
+            .onChange(of: qoderSite) { _, _ in
+                qoderBrowser = nil
+            }
             Button {
-                completionTask = Task {
-                    if await store.addQoderAccount(
-                        credential: qoderCredential,
-                        site: qoderSite,
-                        replacing: relinkingAccount
-                    ) { dismiss() }
-                }
+                qoderBrowser = QoderBrowserRequest(site: qoderSite)
             } label: {
-                Label("Connect Qoder", systemImage: "key.fill")
+                Label("Sign in with the browser", systemImage: "safari")
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity, minHeight: 28)
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: 14))
             .controlSize(.large)
-            .disabled(qoderCredential.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      || store.isLinking)
+            .disabled(store.isLinking)
             if store.isLinking { ProgressView("Checking Qoder credits…") }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

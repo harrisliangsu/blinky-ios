@@ -74,6 +74,9 @@
 		9C7F6EE1DEB3AE4669603A8E /* ZAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD0CC240637ABF3167FD5BD /* ZAIProvider.swift */; };
 		9CCEE7978D61670B4C5A3C50 /* AppIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4072E64832055093577C96E5 /* AppIdentity.swift */; };
 		9DF929661C68AC3A7E5931E1 /* MiniMaxProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC7BEDD54B2367F7AE9D12C /* MiniMaxProvider.swift */; };
+		D8B2F5CA306E59B1C2D4E6F8 /* QoderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A1E4B92F6D48A0B1C3D5E7 /* QoderProvider.swift */; };
+		FAD417EC52807BD3E4F60819 /* QoderBrowserSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C306DB417F6AC2D3E5F708 /* QoderBrowserSignIn.swift */; };
+		1CF6390E74A29DF50618203B /* QoderProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BE528FD63918CE4F507192A /* QoderProviderTests.swift */; };
 		A3EF41D0B435E495E35D32A8 /* MacPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AA5F1952EBFC3BA321528E /* MacPresentationModels.swift */; };
 		AEB1FE9CAB776C88B002ED37 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9EA35D2BC3622A1F9346A4 /* AppStore.swift */; };
 		B36FBA894C67B15249809757 /* ScreenshotFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C2FC4402C38DA435711065 /* ScreenshotFixture.swift */; };
@@ -206,6 +209,9 @@
 		7E6C4F8E3B98131AA7CCACE2 /* ChatGPTProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatGPTProvider.swift; sourceTree = "<group>"; };
 		7EF6F23018C4326E2837B6AF /* TokenActivitySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenActivitySettingsView.swift; sourceTree = "<group>"; };
 		7FC7BEDD54B2367F7AE9D12C /* MiniMaxProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMaxProvider.swift; sourceTree = "<group>"; };
+		C7A1E4B92F6D48A0B1C3D5E7 /* QoderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QoderProvider.swift; sourceTree = "<group>"; };
+		E9C306DB417F6AC2D3E5F708 /* QoderBrowserSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QoderBrowserSignIn.swift; sourceTree = "<group>"; };
+		0BE528FD63918CE4F507192A /* QoderProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QoderProviderTests.swift; sourceTree = "<group>"; };
 		83931C9F6019D1B9EB972127 /* ForecastWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastWindow.swift; sourceTree = "<group>"; };
 		84B396002BEFE45463187750 /* WhenResetTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WhenResetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		890F08D83D74BD869685B52C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -270,6 +276,8 @@
 				4EECEFE18766517276D0EA21 /* KimiProvider.swift */,
 				73ED344AD33B0615417863D6 /* MacContentView.swift */,
 				7FC7BEDD54B2367F7AE9D12C /* MiniMaxProvider.swift */,
+				E9C306DB417F6AC2D3E5F708 /* QoderBrowserSignIn.swift */,
+				C7A1E4B92F6D48A0B1C3D5E7 /* QoderProvider.swift */,
 				44C03C63FA5B98872D5DD44C /* PushServer.swift */,
 				22A34B8AD4E369E693118E17 /* reset.icon */,
 				B8C2FC4402C38DA435711065 /* ScreenshotFixture.swift */,
@@ -353,6 +361,7 @@
 				3F71ACA1AAFC4988D7EC2195 /* MiniMaxProviderTests.swift */,
 				576825053D722459A0C4AA93 /* NotificationSettingsTests.swift */,
 				0641289E032A261E47434CBF /* ParsingTests.swift */,
+				0BE528FD63918CE4F507192A /* QoderProviderTests.swift */,
 				058D27153838FEB82256E59E /* ResetCardSurfaceTests.swift */,
 				5B28FDB5FFAEDC0FDB412241 /* ScreenshotRenderTests.swift */,
 				29030CDB17339C05C55F797B /* TokenActivityTests.swift */,
@@ -587,6 +596,7 @@
 				293B02FC50A842C7BB11F0BD /* MiniMaxProviderTests.swift in Sources */,
 				F03340A357A7C2EF93480365 /* NotificationSettingsTests.swift in Sources */,
 				D2C5A04CBE568D1CDEAEADCB /* ParsingTests.swift in Sources */,
+				1CF6390E74A29DF50618203B /* QoderProviderTests.swift in Sources */,
 				6B0614F35F027D0368946B26 /* ResetCardSurfaceTests.swift in Sources */,
 				E6270CFE6C1F908D88B79072 /* ScreenshotRenderTests.swift in Sources */,
 				3CE7316465696B765FF1FE89 /* TokenActivityTests.swift in Sources */,
@@ -643,6 +653,8 @@
 				EE1686E58E93698C9FCAAF00 /* MacContentView.swift in Sources */,
 				F45AFEE80E033FDD95E96AE7 /* MacPresentationModels.swift in Sources */,
 				9DF929661C68AC3A7E5931E1 /* MiniMaxProvider.swift in Sources */,
+				FAD417EC52807BD3E4F60819 /* QoderBrowserSignIn.swift in Sources */,
+				D8B2F5CA306E59B1C2D4E6F8 /* QoderProvider.swift in Sources */,
 				7E4E214E19F10141C96294EF /* Models.swift in Sources */,
 				D4929A2D4072A16850ABA4D4 /* NotificationSettingsView.swift in Sources */,
 				C50057D10040307300EE37BE /* ProviderIcon.swift in Sources */,
