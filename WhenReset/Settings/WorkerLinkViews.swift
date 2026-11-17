@@ -266,6 +266,8 @@ struct WorkerLinkReviewView: View {
         case .zai, .zhipu, .miniMax, .synthetic, .warp, .openRouter, .fireworksAI,
              .deepSeek, .poe:
             "API key"
+        case .qoder:
+            "Qoder token or session stays on this device"
         case .openAIAPI, .anthropicAPI:
             "Organization Admin API key"
         case .githubCopilot:

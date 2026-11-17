@@ -435,6 +435,8 @@ private struct MacAccountDetailView: View {
         case .zai, .zhipu, .miniMax, .synthetic, .warp, .openRouter, .fireworksAI,
              .deepSeek, .poe:
             "this account’s API key"
+        case .qoder:
+            "this account’s Qoder token or session cookie"
         case .openAIAPI, .anthropicAPI:
             "this account’s organization Admin API key and optional monthly budget"
         case .githubCopilot:
@@ -1739,11 +1741,23 @@ struct MacSettingsView: View {
                 Text("Blinky checks all local accounts at this interval while the app is running. Manual refresh remains available when automatic updates are off.")
             }
 
-            Section("Notifications") {
+            Section("Limit reminders") {
                 Toggle("Unexpected or early resets", isOn: notificationSetting(\.notifyAboutUnexpectedResets))
                 Toggle("Quota resets", isOn: notificationSetting(\.notifyAboutQuotaResets))
                 Toggle("New reset card notices", isOn: notificationSetting(\.notifyAboutNewBankedResets))
-                Toggle("Scheduled reset times", isOn: notificationSetting(\.notifyAtScheduledReset))
+            }
+
+            Section("Reset reminders") {
+                Toggle(ScheduledResetCadence.hourly.notificationTitle,
+                       isOn: notificationSetting(\.notifyAtHourlyReset))
+                Toggle(ScheduledResetCadence.daily.notificationTitle,
+                       isOn: notificationSetting(\.notifyAtDailyReset))
+                Toggle(ScheduledResetCadence.weekly.notificationTitle,
+                       isOn: notificationSetting(\.notifyAtWeeklyReset))
+                Toggle(ScheduledResetCadence.monthly.notificationTitle,
+                       isOn: notificationSetting(\.notifyAtMonthlyReset))
+                Toggle(ScheduledResetCadence.other.notificationTitle,
+                       isOn: notificationSetting(\.notifyAtOtherScheduledReset))
             }
 
             Section("Cloudflare Worker") {
@@ -2190,6 +2204,7 @@ private struct MacAddAccountView: View {
     @State private var selectedProvider: ProviderID?
     @State private var secret = ""
     @State private var zaiRegion: ZAIRegion = .automatic
+    @State private var qoderSite: QoderSite = .international
     @State private var endpoint = ""
     @State private var providerName = ""
     @State private var callback = ""
@@ -2203,6 +2218,10 @@ private struct MacAddAccountView: View {
     init(relinkingAccount: MonitoredAccount? = nil) {
         self.relinkingAccount = relinkingAccount
         _selectedProvider = State(initialValue: relinkingAccount?.providerID)
+        if relinkingAccount?.providerID == .qoder {
+            let credentials = relinkingAccount.flatMap { try? KeychainStore.load(for: $0.id) }
+            _qoderSite = State(initialValue: QoderSite.stored(credentials?.serviceRegion))
+        }
         if relinkingAccount?.providerID == .fireworksAI {
             let credentials = relinkingAccount.flatMap { try? KeychainStore.load(for: $0.id) }
             let remoteResource = relinkingAccount?.workspaceID.hasPrefix("accounts/") == true
@@ -2413,7 +2432,7 @@ private struct MacAddAccountView: View {
         case "compatible_api":
             compatibleLinker
         case "zai", "zhipu", "minimax", "synthetic", "ollama_cloud", "warp", "openrouter",
-             "fireworks", "deepseek", "poe":
+             "fireworks", "deepseek", "poe", "qoder":
             apiKeyLinker(provider)
         default:
             ContentUnavailableView(
@@ -2591,15 +2610,27 @@ private struct MacAddAccountView: View {
 
     private func apiKeyLinker(_ provider: ProviderID) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(provider.rawValue == "ollama_cloud"
+            Text(provider == .qoder
+                 ? "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own."
+                 : provider.rawValue == "ollama_cloud"
                  ? "Paste the Ollama Cloud browser session cookie. It is stored securely in iCloud Keychain."
                  : apiKeyHelp(provider))
                 .foregroundStyle(.secondary)
+            if provider == .qoder {
+                Picker("Site", selection: $qoderSite) {
+                    ForEach(QoderSite.allCases) { site in
+                        Text(site.title).tag(site)
+                    }
+                }
+            }
             if provider == .fireworksAI {
                 TextField("Fireworks account ID (optional)", text: $providerName)
                     .textFieldStyle(.roundedBorder)
             }
-            SecureField(provider.rawValue == "ollama_cloud" ? "Session cookie" : "API key", text: $secret)
+            SecureField(provider == .qoder
+                         ? "Personal token or Cookie header"
+                         : provider.rawValue == "ollama_cloud" ? "Session cookie" : "API key",
+                         text: $secret)
                 .textFieldStyle(.roundedBorder)
             if provider == .zai {
                 Picker("Region · 区域", selection: $zaiRegion) {
@@ -2640,6 +2671,9 @@ private struct MacAddAccountView: View {
                     )
                     case "poe": success = await store.addPoeAccount(
                         apiKey: secret, replacing: relinkingAccount
+                    )
+                    case "qoder": success = await store.addQoderAccount(
+                        credential: secret, site: qoderSite, replacing: relinkingAccount
                     )
                     default: success = false
                     }

@@ -21,6 +21,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
     case fireworksAI = "fireworks"
     case deepSeek = "deepseek"
     case poe = "poe"
+    case qoder = "qoder"
 
     var displayName: String {
         switch self {
@@ -44,6 +45,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .fireworksAI: "Fireworks AI"
         case .deepSeek: "DeepSeek API"
         case .poe: "Poe API"
+        case .qoder: "Qoder"
         }
     }
 
@@ -59,7 +61,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
     /// Browser sessions, experimental OAuth credentials, and user-selected URLs remain on-device.
     var supportsOffDeviceMonitoring: Bool {
         switch self {
-        case .githubCopilot, .ollamaCloud, .antigravity, .compatibleAPI, .newAPI:
+        case .githubCopilot, .ollamaCloud, .antigravity, .compatibleAPI, .newAPI, .qoder:
             false
         default:
             true
@@ -112,6 +114,35 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .fireworksAI: String.localized("Monthly API spend limit")
         case .deepSeek: String.localized("Available API wallet balance")
         case .poe: String.localized("Available API point balance")
+        case .qoder: String.localized("Credit allowance, and a reset time when Qoder reports one")
+        }
+    }
+
+    /// English catalog key for the add-account subtitle. Search matches this
+    /// and the Simplified Chinese catalog entry, not only the current language.
+    var accountDescriptionKey: String {
+        switch self {
+        case .chatGPT: "Usage limits and banked resets"
+        case .claude: "Session and weekly reset times"
+        case .grok: "Weekly Grok credit pool"
+        case .kimi: "5-hour and weekly coding limits"
+        case .githubCopilot: "Chat and premium request quotas"
+        case .zai: "z.ai Coding Plan · 5h and weekly"
+        case .zhipu: "智谱 Coding Plan · 5h and weekly"
+        case .miniMax: "5-hour and weekly coding limits"
+        case .synthetic: "Rolling 5-hour and weekly limits"
+        case .ollamaCloud: "Session and weekly Cloud limits"
+        case .warp: "Monthly request credits"
+        case .antigravity: "Gemini, Claude, and GPT quota pools"
+        case .compatibleAPI: "Reset windows from a compatible endpoint"
+        case .openAIAPI: "Organization API spend and budget balance"
+        case .anthropicAPI: "Organization API spend and budget balance"
+        case .newAPI: "API-key balance from a compatible gateway"
+        case .openRouter: "API-key spending limit and reset"
+        case .fireworksAI: "Monthly API spend limit"
+        case .deepSeek: "Available API wallet balance"
+        case .poe: "Available API point balance"
+        case .qoder: "Credit allowance, and a reset time when Qoder reports one"
         }
     }
 
@@ -127,7 +158,7 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .openAIAPI: "ChatGPTLogo"
         case .anthropicAPI: "ClaudeLogo"
         case .synthetic, .ollamaCloud, .warp, .antigravity, .compatibleAPI, .newAPI,
-             .openRouter, .fireworksAI, .deepSeek, .poe: nil
+             .openRouter, .fireworksAI, .deepSeek, .poe, .qoder: nil
         }
     }
 
@@ -151,7 +182,110 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .fireworksAI: "fireworks"
         case .deepSeek: "water.waves"
         case .poe: "bubble.left.and.bubble.right.fill"
+        // SF Symbol placeholder. Qoder does not publish a reusable official mark here.
+        case .qoder: "q.square.fill"
         }
+    }
+}
+
+/// Filters the add-account provider list. Matching is case-insensitive and
+/// checks the provider name plus the English and Simplified Chinese subtitles.
+enum ProviderSearch {
+    static func matches(_ provider: ProviderID, query: String) -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return true }
+        return haystack(for: provider).contains { field in
+            field.range(
+                of: needle,
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+            ) != nil
+        }
+    }
+
+    static func haystack(for provider: ProviderID) -> [String] {
+        var values = [provider.displayName, provider.accountDescriptionKey, provider.accountDescription]
+        if let chinese = localized(provider.accountDescriptionKey, language: "zh-Hans") {
+            values.append(chinese)
+        }
+        if let english = localized(provider.accountDescriptionKey, language: "en") {
+            values.append(english)
+        }
+        return values
+    }
+
+    private static func localized(_ key: String, language: String) -> String? {
+        guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+              let bundle = Bundle(path: path) else { return nil }
+        let value = String(
+            localized: String.LocalizationValue(stringLiteral: key),
+            bundle: bundle
+        )
+        return value
+    }
+}
+
+/// Which scheduled-reset notification a window belongs to.
+///
+/// Categories follow windows this app already records: a 5-hour or shorter
+/// rolling window, a day, a week, a month, or some other stated reset.
+/// A window that does not report a reset time is not scheduled.
+enum ScheduledResetCadence: String, Codable, CaseIterable, Sendable {
+    case hourly
+    case daily
+    case weekly
+    case monthly
+    case other
+
+    var notificationTitle: String {
+        switch self {
+        case .hourly: String.localized("Hourly reset")
+        case .daily: String.localized("Daily reset")
+        case .weekly: String.localized("Weekly reset")
+        case .monthly: String.localized("Monthly reset")
+        case .other: String.localized("Other reset")
+        }
+    }
+
+    var settingsSubtitle: String {
+        switch self {
+        case .hourly:
+            String.localized("5-hour and shorter rolling windows, when that time arrives.")
+        case .daily:
+            String.localized("About one day, when that time arrives.")
+        case .weekly:
+            String.localized("Weekly limits, when that time arrives.")
+        case .monthly:
+            String.localized("Monthly limits, including Copilot quotas and Warp credits, when that time arrives.")
+        case .other:
+            String.localized("A reported reset that is not an hourly, daily, weekly, or monthly window.")
+        }
+    }
+
+    static func classify(_ window: UsageWindow) -> ScheduledResetCadence? {
+        guard window.reportsReset else { return nil }
+        let minutes = window.windowMinutes
+        if window.kind == .fiveHour || (minutes.map { $0 > 0 && $0 <= 6 * 60 } == true) {
+            return .hourly
+        }
+        if let minutes, (20 * 60...36 * 60).contains(minutes) {
+            return .daily
+        }
+        if window.kind == .weekly || (minutes.map { (6 * 24 * 60...8 * 24 * 60).contains($0) } == true) {
+            return .weekly
+        }
+        if let minutes, (27 * 24 * 60...32 * 24 * 60).contains(minutes) {
+            return .monthly
+        }
+        let identity = "\(window.metricID) \(window.title)".lowercased()
+        if identity.contains("monthly")
+            || window.metricID.hasPrefix("copilot:")
+            || window.metricID.hasPrefix("zai:mcp") {
+            return .monthly
+        }
+        if identity.contains("daily") {
+            return .daily
+        }
+        return .other
     }
 }
 
@@ -477,7 +611,28 @@ struct GlobalNotificationSettings: Codable, Hashable, Sendable {
     var notifyAboutUnexpectedResets = true
     /// A new banked reset card appeared in the inventory.
     var notifyAboutNewBankedResets = true
-    var notifyAtScheduledReset = false
+    /// Arrival-time alerts, split by the windows providers in this app report.
+    var notifyAtHourlyReset = false
+    var notifyAtDailyReset = false
+    var notifyAtWeeklyReset = false
+    var notifyAtMonthlyReset = false
+    var notifyAtOtherScheduledReset = false
+
+    /// True when any arrival-time reset alert is on. Setting it turns every
+    /// cadence on or off together, which is how a saved single switch migrates.
+    var notifyAtScheduledReset: Bool {
+        get {
+            notifyAtHourlyReset || notifyAtDailyReset || notifyAtWeeklyReset
+                || notifyAtMonthlyReset || notifyAtOtherScheduledReset
+        }
+        set {
+            notifyAtHourlyReset = newValue
+            notifyAtDailyReset = newValue
+            notifyAtWeeklyReset = newValue
+            notifyAtMonthlyReset = newValue
+            notifyAtOtherScheduledReset = newValue
+        }
+    }
 
     init(notifyAboutUnexpectedResets: Bool = true, notifyAboutQuotaResets: Bool = false,
          notifyAboutNewBankedResets: Bool = true, notifyAtScheduledReset: Bool = false) {
@@ -501,10 +656,38 @@ struct GlobalNotificationSettings: Codable, Hashable, Sendable {
             Bool.self,
             forKey: .notifyAboutNewBankedResets
         ) ?? true
-        notifyAtScheduledReset = try values.decodeIfPresent(
+        let legacyScheduled = try values.decodeIfPresent(
             Bool.self,
             forKey: .notifyAtScheduledReset
-        ) ?? false
+        )
+        notifyAtHourlyReset = try values.decodeIfPresent(
+            Bool.self, forKey: .notifyAtHourlyReset
+        ) ?? legacyScheduled ?? false
+        notifyAtDailyReset = try values.decodeIfPresent(
+            Bool.self, forKey: .notifyAtDailyReset
+        ) ?? legacyScheduled ?? false
+        notifyAtWeeklyReset = try values.decodeIfPresent(
+            Bool.self, forKey: .notifyAtWeeklyReset
+        ) ?? legacyScheduled ?? false
+        notifyAtMonthlyReset = try values.decodeIfPresent(
+            Bool.self, forKey: .notifyAtMonthlyReset
+        ) ?? legacyScheduled ?? false
+        notifyAtOtherScheduledReset = try values.decodeIfPresent(
+            Bool.self, forKey: .notifyAtOtherScheduledReset
+        ) ?? legacyScheduled ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(notifyAboutUnexpectedResets, forKey: .notifyAboutUnexpectedResets)
+        try values.encode(notifyAboutQuotaResets, forKey: .notifyAboutQuotaResets)
+        try values.encode(notifyAboutNewBankedResets, forKey: .notifyAboutNewBankedResets)
+        try values.encode(notifyAtHourlyReset, forKey: .notifyAtHourlyReset)
+        try values.encode(notifyAtDailyReset, forKey: .notifyAtDailyReset)
+        try values.encode(notifyAtWeeklyReset, forKey: .notifyAtWeeklyReset)
+        try values.encode(notifyAtMonthlyReset, forKey: .notifyAtMonthlyReset)
+        try values.encode(notifyAtOtherScheduledReset, forKey: .notifyAtOtherScheduledReset)
+        try values.encode(notifyAtScheduledReset, forKey: .notifyAtScheduledReset)
     }
 
     func allows(_ eventKind: UsageNotificationEvent.Kind) -> Bool {
@@ -518,6 +701,16 @@ struct GlobalNotificationSettings: Codable, Hashable, Sendable {
         }
     }
 
+    func allowsScheduledReset(_ cadence: ScheduledResetCadence) -> Bool {
+        switch cadence {
+        case .hourly: notifyAtHourlyReset
+        case .daily: notifyAtDailyReset
+        case .weekly: notifyAtWeeklyReset
+        case .monthly: notifyAtMonthlyReset
+        case .other: notifyAtOtherScheduledReset
+        }
+    }
+
     var wantsAnyAlert: Bool {
         notifyAboutUnexpectedResets || notifyAboutQuotaResets
             || notifyAboutNewBankedResets || notifyAtScheduledReset
@@ -526,6 +719,8 @@ struct GlobalNotificationSettings: Codable, Hashable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case notifyAboutUnexpectedResets, notifyAboutQuotaResets
         case notifyAboutNewBankedResets, notifyAtScheduledReset
+        case notifyAtHourlyReset, notifyAtDailyReset, notifyAtWeeklyReset
+        case notifyAtMonthlyReset, notifyAtOtherScheduledReset
     }
 }
 

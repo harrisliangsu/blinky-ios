@@ -32,6 +32,10 @@ struct AddAccountView: View {
     @State private var newAPIKey = ""
     @State private var mainstreamAPIKey = ""
     @State private var fireworksAccountID = ""
+    @State private var qoderCredential = ""
+    @State private var qoderSite: QoderSite = .international
+    @State private var didApplyQoderSiteDefault = false
+    @State private var providerQuery = ""
     @State private var isAddingDemo = false
     @State private var showingRemoteWorkerAccounts = false
     @State private var remoteWorkerAccountsMissingLocally: [RemoteWorkerAccountCandidate] = []
@@ -59,6 +63,10 @@ struct AddAccountView: View {
             _newAPIName = State(initialValue: savedCredentials?.accountLabel
                                 ?? relinkingAccount?.displayName ?? "")
             _newAPIBaseURL = State(initialValue: savedCredentials?.endpointURL ?? "")
+        }
+        if relinkingAccount?.providerID == .qoder,
+           let savedSite = savedCredentials?.serviceRegion {
+            _qoderSite = State(initialValue: QoderSite.stored(savedSite))
         }
         if relinkingAccount?.providerID == .fireworksAI {
             let remoteResource = relinkingAccount?.workspaceID.hasPrefix("accounts/") == true
@@ -136,7 +144,13 @@ struct AddAccountView: View {
                         Text(relinkingAccount == nil ? "Connect a provider" : "Account provider")
                             .font(.title3.bold())
 
-                        ForEach(availableProviders, id: \.self) { provider in
+                        providerSearchField
+
+                        if filteredProviders.isEmpty {
+                            providerSearchEmpty
+                        }
+
+                        ForEach(filteredProviders, id: \.self) { provider in
                             VStack(spacing: 0) {
                                 Button {
                                     withAnimation(.snappy) {
@@ -177,6 +191,12 @@ struct AddAccountView: View {
             .padding(.vertical, 22)
         }
         .background(Color(.systemGroupedBackground))
+        .onAppear {
+            guard !didApplyQoderSiteDefault else { return }
+            didApplyQoderSiteDefault = true
+            guard relinkingAccount?.providerID != .qoder else { return }
+            qoderSite = QoderSite.preferred(locale: locale)
+        }
     }
 
     private var availableProviders: [ProviderID] {
@@ -184,6 +204,57 @@ struct AddAccountView: View {
             locale: locale,
             relinkingProvider: relinkingAccount?.providerID
         )
+    }
+
+    private var filteredProviders: [ProviderID] {
+        availableProviders.filter { ProviderSearch.matches($0, query: providerQuery) }
+    }
+
+    private var providerSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search providers", text: $providerQuery)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            if !providerQuery.isEmpty {
+                Button {
+                    providerQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+        }
+        .accessibilityIdentifier("provider-search-field")
+    }
+
+    private var providerSearchEmpty: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            Text("No matching providers")
+                .font(.headline)
+            Text("Try another name, in Chinese or English.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(22)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
+        .accessibilityIdentifier("provider-search-empty")
     }
 
     private var remoteWorkerImportRefreshID: String {
@@ -347,6 +418,8 @@ struct AddAccountView: View {
             newAPILinker
         case .openRouter, .fireworksAI, .deepSeek, .poe:
             mainstreamAPILinker(provider)
+        case .qoder:
+            qoderLinker
         }
     }
 
@@ -402,9 +475,44 @@ struct AddAccountView: View {
             "Uses GitHub device authorization. Exact Copilot quotas come from an undocumented endpoint and may change."
         case .claude, .zai, .zhipu, .miniMax, .synthetic, .ollamaCloud, .warp,
              .antigravity, .compatibleAPI, .openAIAPI, .anthropicAPI, .newAPI,
-             .openRouter, .fireworksAI, .deepSeek, .poe:
+             .openRouter, .fireworksAI, .deepSeek, .poe, .qoder:
             ""
         }
+    }
+
+    private var qoderLinker: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Picker("Site", selection: $qoderSite) {
+                ForEach(QoderSite.allCases) { site in
+                    Text(site.title).tag(site)
+                }
+            }
+            .pickerStyle(.segmented)
+            providerSecretField("Personal token or Cookie header", text: $qoderCredential)
+            Button {
+                completionTask = Task {
+                    if await store.addQoderAccount(
+                        credential: qoderCredential,
+                        site: qoderSite,
+                        replacing: relinkingAccount
+                    ) { dismiss() }
+                }
+            } label: {
+                Label("Connect Qoder", systemImage: "key.fill")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, minHeight: 28)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 14))
+            .controlSize(.large)
+            .disabled(qoderCredential.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      || store.isLinking)
+            if store.isLinking { ProgressView("Checking Qoder credits…") }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var claudeLinker: some View {

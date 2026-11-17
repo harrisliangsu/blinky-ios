@@ -435,6 +435,8 @@ struct AccountSettingsView: View {
         case .zai, .zhipu, .miniMax, .synthetic, .warp, .openRouter, .fireworksAI,
              .deepSeek, .poe:
             "this account’s API key"
+        case .qoder:
+            "this account’s Qoder token or session cookie"
         case .openAIAPI, .anthropicAPI:
             "this account’s organization Admin API key and optional monthly budget"
         case .githubCopilot:

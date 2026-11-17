@@ -1132,6 +1132,7 @@ final class AppStore {
     private let fireworksAIProvider = FireworksAIProvider()
     private let deepSeekProvider = DeepSeekProvider()
     private let poeProvider = PoeProvider()
+    private let qoderProvider = QoderProvider()
     private var customOrderIDs: [UUID]?
     private var zaiWebLink: ZAIWebLink?
     private var chatGPTLink: DeviceLink?
@@ -2014,7 +2015,7 @@ final class AppStore {
                                    userCode: link.userCode, expiresAt: link.expiresAt)
             case .claude, .zai, .zhipu, .miniMax, .synthetic, .ollamaCloud, .warp,
                  .antigravity, .compatibleAPI, .openAIAPI, .anthropicAPI, .newAPI,
-                 .openRouter, .fireworksAI, .deepSeek, .poe:
+                 .openRouter, .fireworksAI, .deepSeek, .poe, .qoder:
                 throw ProviderError.server(400, "This provider does not use device linking.")
             }
         } catch {
@@ -2051,7 +2052,7 @@ final class AppStore {
                 identity = try await zaiProvider.finishWebLink(zaiWebLink)
             case .claude, .miniMax, .synthetic, .ollamaCloud, .warp,
                  .antigravity, .compatibleAPI, .openAIAPI, .anthropicAPI, .newAPI,
-                 .openRouter, .fireworksAI, .deepSeek, .poe:
+                 .openRouter, .fireworksAI, .deepSeek, .poe, .qoder:
                 throw ProviderError.invalidResponse
             }
             if let relinkingAccount, relinkingAccount.isRemoteOnly {
@@ -2353,6 +2354,17 @@ final class AppStore {
     func addWarpAccount(apiKey: String, replacing relinkingAccount: MonitoredAccount? = nil) async -> Bool {
         await addLinkedIdentity(providerID: .warp, replacing: relinkingAccount) {
             try await self.warpProvider.link(apiKey: apiKey)
+        }
+    }
+
+    @discardableResult
+    func addQoderAccount(
+        credential: String,
+        site: QoderSite,
+        replacing relinkingAccount: MonitoredAccount? = nil
+    ) async -> Bool {
+        await addLinkedIdentity(providerID: .qoder, replacing: relinkingAccount) {
+            try await self.qoderProvider.link(credential: credential, site: site)
         }
     }
 
@@ -2820,6 +2832,11 @@ final class AppStore {
                 )
             case .poe:
                 snapshot = try await poeProvider.fetchUsage(
+                    account: effectiveAccount,
+                    credentials: credentials
+                )
+            case .qoder:
+                snapshot = try await qoderProvider.fetchUsage(
                     account: effectiveAccount,
                     credentials: credentials
                 )
@@ -5530,6 +5547,7 @@ struct ScheduledResetNotificationTarget: Equatable, Sendable {
     var accountName: String
     var metricID: String
     var metricTitle: String
+    var cadence: ScheduledResetCadence
     var fireDate: Date
 
     static func identifier(accountID: UUID, metricID: String) -> String {
@@ -5553,6 +5571,8 @@ enum ScheduledResetNotificationPlanner {
             guard let snapshot = snapshots[account.id] else { continue }
 
             for window in snapshot.usageWindows where window.resetsAt > now.addingTimeInterval(1) {
+                guard let cadence = ScheduledResetCadence.classify(window),
+                      globalSettings.allowsScheduledReset(cadence) else { continue }
                 let identifier = ScheduledResetNotificationTarget.identifier(
                     accountID: account.id,
                     metricID: window.metricID
@@ -5563,6 +5583,7 @@ enum ScheduledResetNotificationPlanner {
                     accountName: account.resolvedDisplayName,
                     metricID: window.metricID,
                     metricTitle: window.displayTitle,
+                    cadence: cadence,
                     fireDate: window.resetsAt
                 )
                 if let existing = targetsByIdentifier[identifier], existing.fireDate <= target.fireDate {
@@ -5637,6 +5658,41 @@ enum UsageNotificationService {
         return delivered
     }
 
+    /// One notification the reader asked to see, so they can confirm delivery.
+    static func sendTestNote() async -> String {
+        let center = UNUserNotificationCenter.current()
+        var settings = await center.notificationSettings()
+        if settings.authorizationStatus == .notDetermined || settings.authorizationStatus == .provisional {
+            _ = try? await center.requestAuthorization(options: [.alert, .sound])
+            settings = await center.notificationSettings()
+        }
+        switch settings.authorizationStatus {
+        case .denied:
+            return String.localized("Notifications are turned off for Blinky in Settings › Notifications.")
+        case .notDetermined:
+            return String.localized("Blinky has not been allowed to post notifications yet. Press Send again to be asked.")
+        case .authorized, .provisional, .ephemeral:
+            break
+        @unknown default:
+            break
+        }
+        let content = UNMutableNotificationContent()
+        content.title = String.localized("Test notification")
+        content.body = String.localized("This is a test notification. Blinky’s notifications look like this.")
+        if settings.soundSetting == .enabled { content.sound = .default }
+        let request = UNNotificationRequest(
+            identifier: "when-reset.test.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        do {
+            try await center.add(request)
+            return String.localized("Sent. If nothing appeared, check Focus and Settings › Notifications.")
+        } catch {
+            return String.localized("Blinky could not post a test notification.")
+        }
+    }
+
     static func reconcileScheduledResets(_ targets: [ScheduledResetNotificationTarget]) async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
@@ -5664,11 +5720,16 @@ enum UsageNotificationService {
             let interval = target.fireDate.timeIntervalSinceNow
             guard interval > 1 else { continue }
             let content = UNMutableNotificationContent()
-            content.title = UsageNotificationCopy.format("%@ reset", target.metricTitle)
-            content.body = UsageNotificationCopy.format(
-                "%1$@’s %2$@ should now be available again.",
-                target.accountName,
+            content.title = UsageNotificationCopy.format(
+                "%1$@ · %2$@",
+                target.cadence.notificationTitle,
                 target.metricTitle
+            )
+            content.body = UsageNotificationCopy.format(
+                "%1$@’s %2$@ (%3$@) should now be available again.",
+                target.accountName,
+                target.metricTitle,
+                target.cadence.notificationTitle
             )
             content.threadIdentifier = "usage-\(target.accountID.uuidString)"
             content.userInfo = [

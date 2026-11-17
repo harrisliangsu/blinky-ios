@@ -9008,6 +9008,694 @@
           }
         }
       }
+    },
+    "Credit allowance, and a reset time when Qoder reports one": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credit allowance, and a reset time when Qoder reports one"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "积分额度，并在 Qoder 报告重置时间时显示"
+          }
+        }
+      }
+    },
+    "Hourly reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hourly reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小时重置"
+          }
+        }
+      }
+    },
+    "Daily reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日重置"
+          }
+        }
+      }
+    },
+    "Weekly reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周重置"
+          }
+        }
+      }
+    },
+    "Monthly reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月重置"
+          }
+        }
+      }
+    },
+    "Other reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other reset"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他重置"
+          }
+        }
+      }
+    },
+    "5-hour and shorter rolling windows, when that time arrives.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5-hour and shorter rolling windows, when that time arrives."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 小时和更短的滚动窗口，到点通知。"
+          }
+        }
+      }
+    },
+    "About one day, when that time arrives.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About one day, when that time arrives."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大约一天的窗口，到点通知。"
+          }
+        }
+      }
+    },
+    "Weekly limits, when that time arrives.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly limits, when that time arrives."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周限额，到点通知。"
+          }
+        }
+      }
+    },
+    "Monthly limits, including Copilot quotas and Warp credits, when that time arrives.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly limits, including Copilot quotas and Warp credits, when that time arrives."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每月限额，包括 Copilot 额度和 Warp 月度积分，到点通知。"
+          }
+        }
+      }
+    },
+    "A reported reset that is not an hourly, daily, weekly, or monthly window.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reported reset that is not an hourly, daily, weekly, or monthly window."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务商报告了重置时间，但不是小时、日、周或月。"
+          }
+        }
+      }
+    },
+    "International site · qoder.com": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "International site · qoder.com"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "国际站 · qoder.com"
+          }
+        }
+      }
+    },
+    "Mainland site · qoder.com.cn": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mainland site · qoder.com.cn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中国站 · qoder.com.cn"
+          }
+        }
+      }
+    },
+    "Paste a Qoder personal token or the Cookie header from the usage page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a Qoder personal token or the Cookie header from the usage page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请粘贴 Qoder 个人令牌，或用量页的 Cookie。"
+          }
+        }
+      }
+    },
+    "Credit allowance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credit allowance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "积分额度"
+          }
+        }
+      }
+    },
+    "Team credits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team credits"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "团队积分"
+          }
+        }
+      }
+    },
+    "%@ reports no credit allowance for this account.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ reports no credit allowance for this account."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 报告此账号没有积分额度。"
+          }
+        }
+      }
+    },
+    "Search providers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search providers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索提供方"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear search"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除搜索"
+          }
+        }
+      }
+    },
+    "No matching providers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching providers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的提供方"
+          }
+        }
+      }
+    },
+    "Try another name, in Chinese or English.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try another name, in Chinese or English."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "换个中文或英文名称再试。"
+          }
+        }
+      }
+    },
+    "Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a personal token (pt- or jt-) from Qoder’s account integrations page, or the Cookie header from the usage page on the site you pick. Blinky reads only that site’s credit allowance. A reset time appears only when Qoder’s nextResetAt is still ahead, and team credits are a separate row with no reset of their own."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 Qoder 账号集成页粘贴个人令牌（以 pt- 或 jt- 开头），或从所选站点的用量页粘贴 Cookie。Blinky 只读取该站点的积分额度。只有 nextResetAt 仍在将来时才显示重置时间。团队积分单独一行，本身没有重置时间。"
+          }
+        }
+      }
+    },
+    "Personal token or Cookie header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal token or Cookie header"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人令牌或 Cookie"
+          }
+        }
+      }
+    },
+    "Connect Qoder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Qoder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接 Qoder"
+          }
+        }
+      }
+    },
+    "Checking Qoder credits…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking Qoder credits…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查 Qoder 积分…"
+          }
+        }
+      }
+    },
+    "Limit reminders": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit reminders"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "额度提醒"
+          }
+        }
+      }
+    },
+    "Reset reminders": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset reminders"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置提醒"
+          }
+        }
+      }
+    },
+    "The same switches cover every account. Quota reset alerts say a window started a new period, like a refilled 5-hour quota, and they are off by default. Unexpected or early resets cover an early quota change and an early weekly reset.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same switches cover every account. Quota reset alerts say a window started a new period, like a refilled 5-hour quota, and they are off by default. Unexpected or early resets cover an early quota change and an early weekly reset."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些开关对所有账号生效。额度重置是说某个窗口开始了新周期，例如 5 小时额度重新计时，默认关闭。意外或提前的重置包括额度提前变化和每周额度提前恢复。"
+          }
+        }
+      }
+    },
+    "These fire when the provider’s reset time arrives, and the notification names the kind of window. A 5-hour or shorter window is an hourly reset, then a day, a week, and a month. Anything else with a real reset time is the other switch. A predicted Codex reset stays in Forecasts and can fire 12, 24, or 48 hours before an announced time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These fire when the provider’s reset time arrives, and the notification names the kind of window. A 5-hour or shorter window is an hourly reset, then a day, a week, and a month. Anything else with a real reset time is the other switch. A predicted Codex reset stays in Forecasts and can fire 12, 24, or 48 hours before an announced time."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些通知在服务商报告的重置时间到达时发出，并写明是哪一种窗口。5 小时及更短的是小时重置，然后是日、周、月。其余有真实重置时间的归入「其他」。Codex 的预测重置仍在「预测」里，可在公布时间前 12、24 或 48 小时提醒。"
+          }
+        }
+      }
+    },
+    "Test notification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test notification"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试通知"
+          }
+        }
+      }
+    },
+    "Sends one now, so you can see that notifications reach you.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends one now, so you can see that notifications reach you."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即发送一条通知，确认通知能正常送达。"
+          }
+        }
+      }
+    },
+    "Notifications are turned off for Blinky in Settings › Notifications.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are turned off for Blinky in Settings › Notifications."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在「设置 › 通知」里关闭了 Blinky 的通知。"
+          }
+        }
+      }
+    },
+    "Blinky has not been allowed to post notifications yet. Press Send again to be asked.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blinky has not been allowed to post notifications yet. Press Send again to be asked."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blinky 还没有获得发送通知的许可。再按一次「发送」会重新询问。"
+          }
+        }
+      }
+    },
+    "This is a test notification. Blinky’s notifications look like this.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a test notification. Blinky’s notifications look like this."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是一条测试通知。Blinky 的通知会以这种样式显示。"
+          }
+        }
+      }
+    },
+    "Sent. If nothing appeared, check Focus and Settings › Notifications.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent. If nothing appeared, check Focus and Settings › Notifications."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送。如果没有看到，请检查专注模式和「设置 › 通知」。"
+          }
+        }
+      }
+    },
+    "Blinky could not post a test notification.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blinky could not post a test notification."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blinky 未能发出测试通知。"
+          }
+        }
+      }
+    },
+    "%1$@ · %2$@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%1$@’s %2$@ (%3$@) should now be available again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@’s %2$@ (%3$@) should now be available again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 的%2$@（%3$@）现在应已恢复可用。"
+          }
+        }
+      }
+    },
+    "this account’s Qoder token or session cookie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this account’s Qoder token or session cookie"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此账号的 Qoder 令牌或会话 Cookie"
+          }
+        }
+      }
+    },
+    "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴 Qoder 个人令牌（pt- 或 jt-）或所选站点用量页的 Cookie。Blinky 只读取该站点的积分额度。nextResetAt 仍在将来时才显示重置。团队积分本身没有重置时间。"
+          }
+        }
+      }
+    },
+    "Qoder token or session stays on this device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qoder token or session stays on this device"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qoder 令牌或会话保留在本机"
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送"
+          }
+        }
+      }
+    },
+    "Site": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "站点"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
