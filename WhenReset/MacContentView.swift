@@ -436,7 +436,7 @@ private struct MacAccountDetailView: View {
              .deepSeek, .poe:
             "this account’s API key"
         case .qoder:
-            "this account’s Qoder token or session cookie"
+            "this account’s Qoder session"
         case .openAIAPI, .anthropicAPI:
             "this account’s organization Admin API key and optional monthly budget"
         case .githubCopilot:
@@ -2205,6 +2205,8 @@ private struct MacAddAccountView: View {
     @State private var secret = ""
     @State private var zaiRegion: ZAIRegion = .automatic
     @State private var qoderSite: QoderSite = .international
+    @State private var qoderBrowser: QoderBrowserRequest?
+    @State private var didApplyQoderSiteDefault = false
     @State private var endpoint = ""
     @State private var providerName = ""
     @State private var callback = ""
@@ -2392,7 +2394,27 @@ private struct MacAddAccountView: View {
         } message: { source in
             Text("Blinky will copy the existing \(source.displayName) credential into its iCloud Keychain and verify the account identity. It will update the Worker only if this same account already has Worker monitoring enabled.")
         }
+        .onAppear {
+            guard !didApplyQoderSiteDefault else { return }
+            didApplyQoderSiteDefault = true
+            guard relinkingAccount?.providerID != .qoder else { return }
+            qoderSite = QoderSite.preferred(locale: locale)
+        }
         .onDisappear { completionTask?.cancel(); store.cancelLink() }
+        .sheet(item: $qoderBrowser) { request in
+            QoderBrowserSignInView(site: request.site) { captured in
+                let site = qoderSite
+                qoderBrowser = nil
+                guard let session = QoderSite.retainedSession(captured, from: request.site, to: site) else { return }
+                completionTask = Task {
+                    if await store.addQoderAccount(session: session, site: site, replacing: relinkingAccount) {
+                        dismiss()
+                    }
+                }
+            } onCancel: {
+                qoderBrowser = nil
+            }
+        }
     }
 
     private var visibleLocalCLIImports: [LocalCLICredentialCapability] {
@@ -2432,8 +2454,10 @@ private struct MacAddAccountView: View {
         case "compatible_api":
             compatibleLinker
         case "zai", "zhipu", "minimax", "synthetic", "ollama_cloud", "warp", "openrouter",
-             "fireworks", "deepseek", "poe", "qoder":
+             "fireworks", "deepseek", "poe":
             apiKeyLinker(provider)
+        case "qoder":
+            qoderLinker
         default:
             ContentUnavailableView(
                 "Connect on iPhone or iPad",
@@ -2608,28 +2632,40 @@ private struct MacAddAccountView: View {
         }
     }
 
+    private var qoderLinker: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Sign in to the site you pick. Blinky opens it in the app and keeps that site’s session on this device. Blinky reads only that site’s credit allowance. A reset time appears only when nextResetAt is still ahead, and team credits are a separate row with no reset of their own.")
+                .foregroundStyle(.secondary)
+            Picker("Site", selection: $qoderSite) {
+                ForEach(QoderSite.allCases) { site in
+                    Text(site.title).tag(site)
+                }
+            }
+            .onChange(of: qoderSite) { _, _ in
+                qoderBrowser = nil
+            }
+            Button {
+                qoderBrowser = QoderBrowserRequest(site: qoderSite)
+            } label: {
+                Label("Sign in with the browser", systemImage: "safari")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(store.isLinking)
+            if store.isLinking { ProgressView("Checking Qoder credits…") }
+        }
+    }
+
     private func apiKeyLinker(_ provider: ProviderID) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(provider == .qoder
-                 ? "Paste a Qoder personal token (pt- or jt-) or the Cookie header from the site you pick. Blinky reads that site’s credit allowance only. A reset is shown when nextResetAt is still ahead. Team credits have no reset of their own."
-                 : provider.rawValue == "ollama_cloud"
+            Text(provider.rawValue == "ollama_cloud"
                  ? "Paste the Ollama Cloud browser session cookie. It is stored securely in iCloud Keychain."
                  : apiKeyHelp(provider))
                 .foregroundStyle(.secondary)
-            if provider == .qoder {
-                Picker("Site", selection: $qoderSite) {
-                    ForEach(QoderSite.allCases) { site in
-                        Text(site.title).tag(site)
-                    }
-                }
-            }
             if provider == .fireworksAI {
                 TextField("Fireworks account ID (optional)", text: $providerName)
                     .textFieldStyle(.roundedBorder)
             }
-            SecureField(provider == .qoder
-                         ? "Personal token or Cookie header"
-                         : provider.rawValue == "ollama_cloud" ? "Session cookie" : "API key",
+            SecureField(provider.rawValue == "ollama_cloud" ? "Session cookie" : "API key",
                          text: $secret)
                 .textFieldStyle(.roundedBorder)
             if provider == .zai {
@@ -2671,9 +2707,6 @@ private struct MacAddAccountView: View {
                     )
                     case "poe": success = await store.addPoeAccount(
                         apiKey: secret, replacing: relinkingAccount
-                    )
-                    case "qoder": success = await store.addQoderAccount(
-                        credential: secret, site: qoderSite, replacing: relinkingAccount
                     )
                     default: success = false
                     }

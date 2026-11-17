@@ -79,17 +79,118 @@ final class QoderProviderTests: XCTestCase {
         XCTAssertThrowsError(try QoderProvider.parseUsage(account: makeQoderAccount(), data: data, now: now))
     }
 
-    func testPersonalTokenAndCookieNormalization() throws {
-        XCTAssertEqual(QoderProvider.accessToken(in: " pt-example-token "), "pt-example-token")
-        XCTAssertEqual(QoderProvider.accessToken(in: "jt-job"), "jt-job")
+    func testPastedTokenIsNotANewSession() throws {
+        XCTAssertThrowsError(try QoderProvider.sessionCredential("pt-live"))
+        XCTAssertThrowsError(try QoderProvider.sessionCredential(" jt-job "))
+        XCTAssertThrowsError(try QoderProvider.sessionCredential("pt-example-token"))
         XCTAssertNil(QoderProvider.accessToken(in: "session=abc"))
 
+        let stored = try QoderProvider.usageRequest(credential: "pt-stored", site: .international)
+        XCTAssertEqual(stored.value(forHTTPHeaderField: "Authorization"), "Bearer pt-stored")
+        XCTAssertNil(stored.value(forHTTPHeaderField: "Cookie"))
+        XCTAssertEqual(stored.url?.host, "qoder.com")
+
+        let session = try QoderProvider.usageRequest(credential: "session=abc; cna=keep", site: .china)
+        XCTAssertEqual(session.value(forHTTPHeaderField: "Cookie"), "session=abc; cna=keep")
+        XCTAssertNil(session.value(forHTTPHeaderField: "Authorization"))
+        XCTAssertEqual(session.url?.host, "qoder.com.cn")
+        XCTAssertEqual(session.value(forHTTPHeaderField: "Origin"), "https://qoder.com.cn")
+        XCTAssertEqual(session.value(forHTTPHeaderField: "Referer"), "https://qoder.com.cn/account/usage")
+        XCTAssertEqual(session.value(forHTTPHeaderField: "Bx-V"), "2.5.35")
+    }
+
+    func testCookieNormalizationDropsAnalyticsAndKeepsAlibaba() throws {
         let cookie = try QoderProvider.normalizedCookie(
-            "Cookie: session=abc; _ga=1; cna=keep; session=second; bad"
+            "Cookie: session=abc; _ga=1; _gcl_au=drop; Hm_lvt=drop; cna=keep; isg=keep; tfstk=keep; session=second; bad"
         )
-        XCTAssertEqual(cookie, "session=abc; cna=keep")
+        XCTAssertEqual(cookie, "session=abc; cna=keep; isg=keep; tfstk=keep")
         XCTAssertThrowsError(try QoderProvider.normalizedCookie("Cookie: _ga=1"))
-        XCTAssertEqual(try QoderProvider.credential("pt-live"), "pt-live")
+        XCTAssertThrowsError(try QoderProvider.normalizedCookie("session=ab\nc"))
+        XCTAssertThrowsError(try QoderProvider.sessionCredential(""))
+        XCTAssertEqual(try QoderProvider.sessionCredential("Cookie: session=abc; _fbp=1"), "session=abc")
+    }
+
+    func testBrowserCookiesStayOnTheChosenSite() throws {
+        let cookies = [
+            try cookie("session", "intl", domain: "qoder.com"),
+            try cookie("qoder_csrf_token", "csrf", domain: "qoder.com"),
+            try cookie("_ga", "analytics", domain: "qoder.com"),
+            try cookie("cna", "alibaba", domain: "qoder.com"),
+            try cookie("edge", "sub", domain: "api.qoder.com"),
+            try cookie("session", "cn", domain: "qoder.com.cn"),
+            try cookie("acw_tc", "waf", domain: "qoder.com.cn"),
+        ]
+        let international = try QoderBrowserSession.header(from: cookies, site: .international)
+        XCTAssertEqual(international, "session=intl; qoder_csrf_token=csrf; cna=alibaba; edge=sub")
+        XCTAssertFalse(international.contains("=cn"))
+        XCTAssertFalse(international.contains("acw_tc"))
+
+        let china = try QoderBrowserSession.header(from: cookies, site: .china)
+        XCTAssertEqual(china, "session=cn; acw_tc=waf")
+        XCTAssertFalse(china.contains("intl"))
+        XCTAssertFalse(china.contains("csrf"))
+
+        XCTAssertThrowsError(try QoderBrowserSession.header(from: [
+            try cookie("_ga", "1", domain: "qoder.com"),
+            try cookie("session", "cn", domain: "qoder.com.cn"),
+        ], site: .international))
+        XCTAssertThrowsError(try QoderBrowserSession.header(from: [
+            try cookie("qoder_csrf_token", "csrf", domain: "qoder.com"),
+            try cookie("acw_tc", "waf", domain: "qoder.com"),
+        ], site: .international))
+    }
+
+    func testSignedInPageIsTheAccountUsagePageForThatSite() {
+        XCTAssertEqual(QoderSite.international.signInURL.absoluteString, "https://qoder.com/account/usage")
+        XCTAssertEqual(QoderSite.china.signInURL.absoluteString, "https://qoder.com.cn/account/usage")
+        XCTAssertTrue(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com/account/usage")!, site: .international
+        ))
+        XCTAssertTrue(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com/account/usage/?from=sign-in")!, site: .international
+        ))
+        XCTAssertTrue(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://www.qoder.com/account/usage")!, site: .international
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com/users/sign-in?oauth_callback=https%3A%2F%2Fqoder.com%2Faccount%2Fusage")!,
+            site: .international
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com.cn/account/usage")!, site: .international
+        ))
+        XCTAssertTrue(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com.cn/account/usage")!, site: .china
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://qoder.com/account/usage")!, site: .china
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://notqoder.com/account/usage")!, site: .international
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "https://evil.qoder.com.example/account/usage")!, site: .international
+        ))
+        XCTAssertFalse(QoderBrowserSession.isSignedInAccountPage(
+            URL(string: "http://qoder.com/account/usage")!, site: .international
+        ))
+        XCTAssertFalse(QoderSite.owns(host: "qoder.com.cn", site: .international))
+        XCTAssertFalse(QoderSite.owns(host: ".qoder.com", site: .china))
+        XCTAssertTrue(QoderSite.owns(host: "api.qoder.com", site: .international))
+        XCTAssertTrue(QoderSite.owns(host: ".qoder.com.cn", site: .china))
+        XCTAssertNil(QoderSite.retainedSession("session=abc", from: .international, to: .china))
+        XCTAssertEqual(QoderSite.retainedSession("session=abc", from: .china, to: .china), "session=abc")
+        XCTAssertEqual(ProviderID.qoder.logoAssetName, "QoderLogo")
+    }
+
+    private func cookie(_ name: String, _ value: String, domain: String) throws -> HTTPCookie {
+        let properties: [HTTPCookiePropertyKey: Any] = [
+            .name: name,
+            .value: value,
+            .domain: domain,
+            .path: "/",
+        ]
+        return try XCTUnwrap(HTTPCookie(properties: properties))
     }
 
     func testProviderSearchMatchesChineseAndEnglish() {

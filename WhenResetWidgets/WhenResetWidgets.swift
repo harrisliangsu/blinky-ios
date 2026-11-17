@@ -1821,6 +1821,16 @@ private struct LockWidgetView: View {
     }
 }
 
+private func accessoryAccountIcon(_ snapshot: UsageSnapshot, fallback: String) -> Image {
+    if let symbol = snapshot.accountSymbolName, !symbol.isEmpty {
+        return Image(systemName: symbol)
+    }
+    if snapshot.accountProviderID == .qoder {
+        return Image("QoderLogo").renderingMode(.template)
+    }
+    return Image(systemName: snapshot.accountProviderID?.systemImageName ?? fallback)
+}
+
 private struct LockCircularView: View {
     let entry: UsageEntry
     private var style: LockScreenDisplayStyle {
@@ -1834,8 +1844,7 @@ private struct LockCircularView: View {
         case .progress:
             if let progress = entry.target.progress(at: entry.date) {
                 Gauge(value: progress, in: 0...1) {
-                    Image(systemName: entry.snapshot.accountSymbolName
-                          ?? entry.snapshot.accountProviderID?.systemImageName ?? "gauge.with.dots.needle.33percent")
+                    accessoryAccountIcon(entry.snapshot, fallback: "gauge.with.dots.needle.33percent")
                 } currentValueLabel: {
                     Text(entry.target.compactValueLabel)
                 }
@@ -1860,8 +1869,7 @@ private struct LockCircularView: View {
 
     private var compactValue: some View {
         VStack(spacing: 1) {
-            Image(systemName: entry.snapshot.accountSymbolName
-                  ?? entry.snapshot.accountProviderID?.systemImageName ?? "clock.arrow.circlepath")
+            accessoryAccountIcon(entry.snapshot, fallback: "clock.arrow.circlepath")
             Text(entry.target.compactValueLabel)
                 .font(.caption.bold()).minimumScaleFactor(0.45)
         }
@@ -1901,8 +1909,7 @@ private struct LockInlineView: View {
                 }
             }
         } icon: {
-            Image(systemName: entry.snapshot.accountSymbolName
-                  ?? entry.snapshot.accountProviderID?.systemImageName ?? "clock.arrow.circlepath")
+            accessoryAccountIcon(entry.snapshot, fallback: "clock.arrow.circlepath")
         }
     }
 }

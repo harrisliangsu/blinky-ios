@@ -24,7 +24,7 @@ struct ProviderIcon: View {
                 } else if let assetName = providerID.logoAssetName {
                     Image(assetName)
                         .resizable()
-                        .renderingMode(providerID == .githubCopilot ? .template : .original)
+                        .renderingMode(usesTemplateLogo ? .template : .original)
                         .scaledToFit()
                         .padding(side * imageInsetFraction)
                         .foregroundStyle(providerID == .githubCopilot ? Color.primary : foregroundColor)
@@ -40,6 +40,12 @@ struct ProviderIcon: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityHidden(true)
+    }
+
+    /// Copilot and Qoder ship as single-color marks. Qoder is tinted with
+    /// the Mac brand green (`#2ADB5C`); the glyph is the lobe-icons mark.
+    private var usesTemplateLogo: Bool {
+        providerID == .githubCopilot || providerID == .qoder
     }
 
     private var customSymbolName: String? {
@@ -101,8 +107,9 @@ struct ProviderIcon: View {
         case .githubCopilot: 0.18
         case .claude, .anthropicAPI, .kimi, .zai, .zhipu, .grok: 0
         case .miniMax: 0.13
+        case .qoder: 0.16
         case .synthetic, .ollamaCloud, .warp, .antigravity, .compatibleAPI, .newAPI,
-             .openRouter, .fireworksAI, .deepSeek, .poe, .qoder: 0.2
+             .openRouter, .fireworksAI, .deepSeek, .poe: 0.2
         }
     }
 }

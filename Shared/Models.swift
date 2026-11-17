@@ -157,8 +157,9 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .miniMax: "MiniMaxLogo"
         case .openAIAPI: "ChatGPTLogo"
         case .anthropicAPI: "ClaudeLogo"
+        case .qoder: "QoderLogo"
         case .synthetic, .ollamaCloud, .warp, .antigravity, .compatibleAPI, .newAPI,
-             .openRouter, .fireworksAI, .deepSeek, .poe, .qoder: nil
+             .openRouter, .fireworksAI, .deepSeek, .poe: nil
         }
     }
 
@@ -182,7 +183,8 @@ enum ProviderID: String, Codable, CaseIterable, Sendable {
         case .fireworksAI: "fireworks"
         case .deepSeek: "water.waves"
         case .poe: "bubble.left.and.bubble.right.fill"
-        // SF Symbol placeholder. Qoder does not publish a reusable official mark here.
+        // Lock Screen accessories that can only draw an SF Symbol. The Qoder
+        // mark itself is `QoderLogo`.
         case .qoder: "q.square.fill"
         }
     }
