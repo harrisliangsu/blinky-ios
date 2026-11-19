@@ -20,7 +20,7 @@ struct RefreshSettingsView: View {
                     }
                 }
             } footer: {
-                Text("The in-app interval runs while Blinky is open. Background refresh and Live Activity use the second interval.")
+                Text("The in-app interval runs only while Blinky is open. After you leave, Blinky asks iOS for a background refresh using the second interval. iOS chooses the time. Background App Refresh must be on for Blinky, and Low Power Mode can delay it. A widget number changes only after a provider response is saved. The time it shows is that save, not a guess.")
             }
             .blinkySettingsSection()
         }

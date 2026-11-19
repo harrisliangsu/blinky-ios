@@ -6497,18 +6497,18 @@
         }
       }
     },
-    "The in-app interval runs while Blinky is open. Background refresh and Live Activity use the second interval.": {
+    "The in-app interval runs only while Blinky is open. After you leave, Blinky asks iOS for a background refresh using the second interval. iOS chooses the time. Background App Refresh must be on for Blinky, and Low Power Mode can delay it. A widget number changes only after a provider response is saved. The time it shows is that save, not a guess.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The in-app interval runs while Blinky is open. Background refresh and Live Activity use the second interval."
+            "value": "The in-app interval runs only while Blinky is open. After you leave, Blinky asks iOS for a background refresh using the second interval. iOS chooses the time. Background App Refresh must be on for Blinky, and Low Power Mode can delay it. A widget number changes only after a provider response is saved. The time it shows is that save, not a guess."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用内间隔在 Blinky 打开时生效。后台刷新和实时活动使用第二个间隔。"
+            "value": "应用内间隔只在 Blinky 打开时运行。离开后，Blinky 会按第二个间隔向 iOS 申请后台刷新。具体时间由 iOS 决定。需要为 Blinky 打开「后台 App 刷新」，低电量模式可能会推迟。小组件上的数字只有在服务返回并保存后才会变。显示的时间是这次保存的时间，不是估算。"
           }
         }
       }
