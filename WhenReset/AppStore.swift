@@ -2670,9 +2670,13 @@ final class AppStore {
         } onCancel: {
             for task in tasks { task.cancel() }
         }
+        // Write the shared snapshot even when this pass is cancelled. A
+        // background expiration used to return here and leave every widget
+        // on the previous numbers, including accounts that had already
+        // received a new provider response.
+        publishSnapshots()
         guard !Task.isCancelled else { return false }
         await deliverPendingUsageNotifications()
-        publishSnapshots()
         await reconcileScheduledResetNotifications()
         await updateLiveActivity()
         await reconcileLiveActivity()
@@ -2930,6 +2934,9 @@ final class AppStore {
             )
             snapshots[account.id] = snapshot
             refreshFailures.removeValue(forKey: account.id)
+            if source == .background {
+                publishSnapshots()
+            }
             var workerCredentialReplacementSucceeded = true
             if source == .accountLink, isServerMonitoringEnabled(for: account) {
                 workerCredentialReplacementSucceeded = await uploadServerAccount(

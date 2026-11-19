@@ -187,26 +187,59 @@ enum BackgroundRefreshController {
                 task.setTaskCompleted(success: false)
                 return
             }
+            let gate = BackgroundRefreshCompletion()
             let work = Task { @MainActor in
-                await run(refreshTask)
+                await run(refreshTask, gate: gate)
             }
             refreshTask.expirationHandler = {
                 work.cancel()
+                // If the refresh does not return, close the task. A second
+                // call is ignored. iOS reduces future launches when this
+                // is omitted.
+                gate.finish(refreshTask, success: false)
             }
         }
     }
 
     @MainActor
-    private static func run(_ task: BGAppRefreshTask) async {
+    private static func run(_ task: BGAppRefreshTask, gate: BackgroundRefreshCompletion) async {
         BackgroundRefreshScheduler.noteRunStarted()
-        if let store {
-            BackgroundRefreshScheduler.scheduleNext(after: store.refreshSettings.backgroundInterval)
-            await store.synchronizeAccountsFromICloudKeychain()
-            let refreshed = await store.refreshAll(source: .background)
-            task.setTaskCompleted(success: refreshed && !Task.isCancelled)
-        } else {
-            task.setTaskCompleted(success: false)
+        guard let store else {
+            gate.finish(task, success: false)
+            return
         }
+        BackgroundRefreshScheduler.scheduleNext(after: store.refreshSettings.backgroundInterval)
+        await store.synchronizeAccountsFromICloudKeychain()
+        if store.isRefreshing {
+            gate.finish(task, success: !Task.isCancelled)
+            return
+        }
+        // refreshAll writes the shared snapshot before it returns, including
+        // when iOS cancels the pass after a provider has already answered.
+        _ = await store.refreshAll(source: .background)
+        gate.finish(
+            task,
+            success: BackgroundRefreshReporting.reportsSuccess(
+                persistedSnapshots: true,
+                expiredBeforePersist: false
+            )
+        )
+    }
+}
+
+/// `BGAppRefreshTask.setTaskCompleted` may be called once. The expiration
+/// handler and the refresh can both reach it.
+final class BackgroundRefreshCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didFinish = false
+
+    func finish(_ task: BGAppRefreshTask, success: Bool) {
+        lock.lock()
+        let alreadyFinished = didFinish
+        didFinish = true
+        lock.unlock()
+        guard !alreadyFinished else { return }
+        task.setTaskCompleted(success: success)
     }
 }
 #endif

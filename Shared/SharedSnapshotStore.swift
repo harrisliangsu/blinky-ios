@@ -10,8 +10,13 @@ enum SharedSnapshotStore {
     }
 
     static func save(_ snapshots: [UsageSnapshot]) {
-        guard let data = try? JSONEncoder().encode(snapshots) else { return }
-        UserDefaults(suiteName: suiteName)?.set(data, forKey: snapshotsKey)
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = try? JSONEncoder().encode(snapshots) else { return }
+        defaults.set(data, forKey: snapshotsKey)
+        // WidgetKit reads this suite from another process. Flush before the
+        // app asks every widget family to reload, or the reload can still
+        // see the previous snapshot.
+        defaults.synchronize()
     }
 
     static func loadHistoryPoints(now: Date = .now) -> [UsageHistoryPoint] {
@@ -31,6 +36,18 @@ enum SharedSnapshotStore {
                 }
                 return $0.metricID < $1.metricID
             }
+    }
+}
+
+/// What a finished background refresh should tell iOS.
+///
+/// iOS uses the flag to decide whether to keep launching the app later.
+/// A provider that did not answer is not a failed task when the snapshots
+/// that did arrive were written for the widgets. The task is a failure only
+/// when it was expired before that write. The system still chooses the time.
+enum BackgroundRefreshReporting {
+    static func reportsSuccess(persistedSnapshots: Bool, expiredBeforePersist: Bool) -> Bool {
+        persistedSnapshots && !expiredBeforePersist
     }
 }
 
