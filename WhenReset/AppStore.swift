@@ -1149,6 +1149,26 @@ enum DeviceUsageEnableCompensation {
     }
 }
 
+/// Shared-snapshot writes observed by a background task, including from its expiration handler.
+final class SnapshotPublishCounter: @unchecked Sendable {
+    static let shared = SnapshotPublishCounter()
+
+    private let lock = NSLock()
+    private var value = 0
+
+    func increment() {
+        lock.lock()
+        value += 1
+        lock.unlock()
+    }
+
+    var current: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+}
+
 @MainActor @Observable
 final class AppStore {
     private(set) var accounts: [MonitoredAccount] = []
@@ -1235,6 +1255,7 @@ final class AppStore {
     private let serverRegistrationOperationGate = ServerRegistrationOperationGate()
     private var hasStarted = false
     private var isStarting = false
+    private var refreshIdleWaiters: [CheckedContinuation<Void, Never>] = []
     private var accountKeychainSyncTask: Task<Void, Never>?
     /// The Worker link transition is intentionally serialized with account refreshes. Without
     /// this, a just-completed provider sign-in can race the APNs/device registration and surface
@@ -2651,7 +2672,12 @@ final class AppStore {
         guard !isRefreshing else { return false }
         await waitForPushServerTransition()
         isRefreshing = true; errorMessage = nil
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            let waiters = refreshIdleWaiters
+            refreshIdleWaiters.removeAll()
+            waiters.forEach { $0.resume() }
+        }
         if source == .manual, hasAnyEnabledNotification {
             await UsageNotificationService.prepareProvisionalAuthorization()
         }
@@ -5601,8 +5627,22 @@ final class AppStore {
         }
     }
 
+    /// Waits until an in-flight `refreshAll` has published and cleared `isRefreshing`.
+    /// A background task that finishes early suspends the process and drops that write.
+    func waitForOngoingRefresh() async {
+        guard isRefreshing else { return }
+        await withCheckedContinuation { continuation in
+            if isRefreshing {
+                refreshIdleWaiters.append(continuation)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+
     private func publishSnapshots() {
         persistSharedSnapshots(for: accounts)
+        SnapshotPublishCounter.shared.increment()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -5612,6 +5652,26 @@ final class AppStore {
                 presentedSnapshot($0, for: account).filtered(using: settings(for: account))
             }
         })
+        persistWidgetRefreshManifest(for: accounts)
+    }
+
+    /// Tells the widget which accounts it can refresh on its own, and with which filters.
+    private func persistWidgetRefreshManifest(for accounts: [MonitoredAccount]) {
+        let pollable = accounts.filter { account in
+            WidgetRefreshPlan.pollsOnDevice(
+                account,
+                serverMonitoringEnabled: isServerMonitoringEnabled(for: account),
+                hasLocalCredentials: hasLocalCredentials(for: account)
+            )
+        }
+        WidgetRefreshManifestStore.save(WidgetRefreshManifest(
+            accounts: pollable,
+            settingsByAccountID: Dictionary(uniqueKeysWithValues: pollable.map {
+                ($0.id.uuidString, settings(for: $0))
+            }),
+            minimumInterval: refreshSettings.backgroundInterval.timeInterval
+                ?? WidgetRefreshPlan.defaultMinimumInterval
+        ))
     }
 
     private func presentedSnapshot(_ snapshot: UsageSnapshot, for account: MonitoredAccount) -> UsageSnapshot {

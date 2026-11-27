@@ -573,6 +573,7 @@ private struct UsageWidgetProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: UsageWidgetConfigurationIntent, in context: Context) async -> Timeline<UsageEntry> {
+        await WidgetUsageRefresh.shared.refreshIfNeeded(preview: context.isPreview)
         let entry = WidgetEntryResolver.resolve(account: configuration.account, metric: configuration.metric,
                                                 homeStyle: configuration.appearance,
                                                 accountLimit: configuration.accountLimit)
@@ -595,6 +596,7 @@ private struct UsageLockScreenWidgetProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: UsageLockScreenConfigurationIntent,
                   in context: Context) async -> Timeline<UsageEntry> {
+        await WidgetUsageRefresh.shared.refreshIfNeeded(preview: context.isPreview)
         let entry = WidgetEntryResolver.resolve(account: configuration.account, metric: configuration.metric,
                                                 displayStyle: configuration.displayStyle)
         return Timeline(entries: [entry], policy: .after(WidgetTimelinePolicy.reloadDate(for: entry)))

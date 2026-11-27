@@ -8,5 +8,11 @@
     <array>
         <string>$(APP_GROUP_IDENTIFIER)</string>
     </array>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)$(KEYCHAIN_GROUP_SUFFIX)</string>
+    </array>
 </dict>
 </plist>

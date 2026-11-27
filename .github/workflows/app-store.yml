@@ -255,6 +255,7 @@ jobs:
             /usr/libexec/PlistBuddy -c 'Set :com.apple.developer.aps-environment production' "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Set :com.apple.security.application-groups:0 $APP_GROUP_IDENTIFIER" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Set :com.apple.security.application-groups:0 $APP_GROUP_IDENTIFIER" "$widget_entitlements"
+            /usr/libexec/PlistBuddy -c "Set :keychain-access-groups:0 ${team_id}.${KEYCHAIN_GROUP_SUFFIX}" "$widget_entitlements"
             /usr/libexec/PlistBuddy -c "Set :keychain-access-groups:0 ${team_id}.${KEYCHAIN_GROUP_SUFFIX}" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string ${team_id}.${app_bundle_id}" "$app_entitlements"
             /usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string $team_id" "$app_entitlements"
