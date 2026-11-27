@@ -117,6 +117,12 @@ enum ChatGPTDuplicateCredentialPolicy {
     }
 }
 
+struct PushRegistrationCredentials: Codable, Equatable, Sendable {
+    var deviceID: UUID
+    var deviceSecret: String
+    var serverURL: URL
+}
+
 enum KeychainStore {
     static var credentialsService: String { "\(AppIdentity.bundleIdentifier).credentials" }
     static var accountsService: String { "\(AppIdentity.bundleIdentifier).accounts" }

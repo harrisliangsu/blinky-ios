@@ -18,8 +18,8 @@ settings:
     # one above the highest build already on App Store Connect.
     SWIFT_VERSION: "6.0"
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "1.16"
-    CURRENT_PROJECT_VERSION: "41"
+    MARKETING_VERSION: "1.17"
+    CURRENT_PROJECT_VERSION: "42"
 targets:
   WhenReset:
     type: application
@@ -66,6 +66,20 @@ targets:
     sources:
       - path: WhenResetWidgets
       - path: Shared
+      # The timeline fetches usage itself. These are the same provider and
+      # Keychain files the app uses; the widget does not link the app target.
+      - path: WhenReset
+        includes:
+          - LocalProviderUsageFetcher.swift
+          - KeychainStore.swift
+          - ChatGPTProvider.swift
+          - ClaudeProvider.swift
+          - CopilotProvider.swift
+          - KimiProvider.swift
+          - MiniMaxProvider.swift
+          - QoderProvider.swift
+          - ZAIProvider.swift
+          - AdditionalProviders.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: "$(WIDGET_BUNDLE_IDENTIFIER)"

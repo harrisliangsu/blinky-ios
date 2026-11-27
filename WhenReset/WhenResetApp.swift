@@ -188,42 +188,82 @@ enum BackgroundRefreshController {
                 return
             }
             let gate = BackgroundRefreshCompletion()
+            let generation = BackgroundRefreshGeneration()
             let work = Task { @MainActor in
-                await run(refreshTask, gate: gate)
+                await run(refreshTask, gate: gate, generation: generation)
             }
             refreshTask.expirationHandler = {
                 work.cancel()
-                // If the refresh does not return, close the task. A second
-                // call is ignored. iOS reduces future launches when this
-                // is omitted.
-                gate.finish(refreshTask, success: false)
+                // A provider that already answered has incremented the counter.
+                // Reporting that write as a failure is what made iOS stop launching later.
+                if generation.didPersist() {
+                    gate.finish(refreshTask, success: true)
+                    return
+                }
+                Task { @MainActor in
+                    await work.value
+                    gate.finish(refreshTask, success: generation.didPersist())
+                }
             }
         }
     }
 
     @MainActor
-    private static func run(_ task: BGAppRefreshTask, gate: BackgroundRefreshCompletion) async {
+    private static func run(
+        _ task: BGAppRefreshTask,
+        gate: BackgroundRefreshCompletion,
+        generation: BackgroundRefreshGeneration
+    ) async {
         BackgroundRefreshScheduler.noteRunStarted()
         guard let store else {
+            BackgroundRefreshScheduler.scheduleNext(after: .fifteenMinutes)
             gate.finish(task, success: false)
             return
         }
+        generation.arm(SnapshotPublishCounter.shared)
         BackgroundRefreshScheduler.scheduleNext(after: store.refreshSettings.backgroundInterval)
         await store.synchronizeAccountsFromICloudKeychain()
-        if store.isRefreshing {
-            gate.finish(task, success: !Task.isCancelled)
-            return
+        // Finishing while another refresh is in flight suspends the app and drops its write.
+        let joinedInFlight = store.isRefreshing
+        if joinedInFlight {
+            await store.waitForOngoingRefresh()
+        } else {
+            // refreshAll writes the shared snapshot before it returns, including
+            // when iOS cancels the pass after a provider has already answered.
+            _ = await store.refreshAll(source: .background)
         }
-        // refreshAll writes the shared snapshot before it returns, including
-        // when iOS cancels the pass after a provider has already answered.
-        _ = await store.refreshAll(source: .background)
+        let persisted = generation.didPersist() || joinedInFlight
+        let expired = Task.isCancelled
         gate.finish(
             task,
             success: BackgroundRefreshReporting.reportsSuccess(
-                persistedSnapshots: true,
-                expiredBeforePersist: false
+                persistedSnapshots: persisted,
+                expiredBeforePersist: expired && !persisted
             )
         )
+    }
+}
+
+/// The snapshot generation at the start of one background pass.
+final class BackgroundRefreshGeneration: @unchecked Sendable {
+    private let lock = NSLock()
+    private var counter: SnapshotPublishCounter?
+    private var generation = 0
+
+    func arm(_ counter: SnapshotPublishCounter) {
+        lock.lock()
+        self.counter = counter
+        generation = counter.current
+        lock.unlock()
+    }
+
+    func didPersist() -> Bool {
+        lock.lock()
+        let counter = self.counter
+        let generation = self.generation
+        lock.unlock()
+        guard let counter else { return false }
+        return counter.current > generation
     }
 }
 

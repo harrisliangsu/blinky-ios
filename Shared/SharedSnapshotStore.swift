@@ -2,21 +2,46 @@ import Foundation
 
 enum SharedSnapshotStore {
     static var suiteName: String { AppIdentity.appGroupIdentifier }
-    private static let snapshotsKey = "usageSnapshots.v1"
+    static let snapshotsKey = "usageSnapshots.v1"
+    private static let snapshotFileName = "usage-snapshots-v1.json"
 
     static func load() -> [UsageSnapshot] {
+        if let url = snapshotFileURL(),
+           let data = try? Data(contentsOf: url),
+           let snapshots = try? JSONDecoder().decode([UsageSnapshot].self, from: data) {
+            return snapshots
+        }
         guard let data = UserDefaults(suiteName: suiteName)?.data(forKey: snapshotsKey) else { return [] }
         return (try? JSONDecoder().decode([UsageSnapshot].self, from: data)) ?? []
     }
 
     static func save(_ snapshots: [UsageSnapshot]) {
-        guard let defaults = UserDefaults(suiteName: suiteName),
-              let data = try? JSONEncoder().encode(snapshots) else { return }
+        guard let data = try? JSONEncoder().encode(snapshots) else { return }
+        if let url = snapshotFileURL() {
+            let directory = url.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try? data.write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: url.path
+            )
+        }
+        // The file is what the widget reads. Defaults stay in sync for anything
+        // that still looks there, and are flushed before a timeline reload.
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         defaults.set(data, forKey: snapshotsKey)
-        // WidgetKit reads this suite from another process. Flush before the
-        // app asks every widget family to reload, or the reload can still
-        // see the previous snapshot.
         defaults.synchronize()
+    }
+
+    static func appGroupSupportDirectory(fileManager: FileManager = .default) -> URL? {
+        fileManager.containerURL(forSecurityApplicationGroupIdentifier: suiteName)?
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+    }
+
+    static func snapshotFileURL(fileManager: FileManager = .default) -> URL? {
+        appGroupSupportDirectory(fileManager: fileManager)?
+            .appendingPathComponent(snapshotFileName, isDirectory: false)
     }
 
     static func loadHistoryPoints(now: Date = .now) -> [UsageHistoryPoint] {

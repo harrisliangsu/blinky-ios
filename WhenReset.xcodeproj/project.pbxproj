@@ -8,6 +8,20 @@
 
 /* Begin PBXBuildFile section */
 		04265C6279CD779D35C8A9CF /* UsageBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3302825531BE95545D0CAEF7 /* UsageBarTests.swift */; };
+		F1A2B3C4D5E6F708192A0B02 /* WidgetSnapshotRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A0B01 /* WidgetSnapshotRefresh.swift */; };
+		F1A2B3C4D5E6F708192A0B03 /* WidgetSnapshotRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A0B01 /* WidgetSnapshotRefresh.swift */; };
+		F1A2B3C4D5E6F708192A0B05 /* LocalProviderUsageFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A0B04 /* LocalProviderUsageFetcher.swift */; };
+		F1A2B3C4D5E6F708192A0B06 /* LocalProviderUsageFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A0B04 /* LocalProviderUsageFetcher.swift */; };
+		F1A2B3C4D5E6F708192A0B08 /* WidgetUsageRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A0B07 /* WidgetUsageRefresh.swift */; };
+		F1A2B3C4D5E6F708192A0B11 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0584614E923036E4057D702 /* KeychainStore.swift */; };
+		F1A2B3C4D5E6F708192A0B12 /* ChatGPTProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E6C4F8E3B98131AA7CCACE2 /* ChatGPTProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B13 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED4854532437B4A50DA9477 /* ClaudeProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B14 /* CopilotProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CBF163971E273F2B9CEF551 /* CopilotProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B15 /* KimiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EECEFE18766517276D0EA21 /* KimiProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B16 /* MiniMaxProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC7BEDD54B2367F7AE9D12C /* MiniMaxProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B17 /* QoderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A1E4B92F6D48A0B1C3D5E7 /* QoderProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B18 /* ZAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD0CC240637ABF3167FD5BD /* ZAIProvider.swift */; };
+		F1A2B3C4D5E6F708192A0B19 /* AdditionalProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96A417C77D78F94FC53D46BB /* AdditionalProviders.swift */; };
 		0AF8ED3F4DCA1AD0A6485E0F /* ForecastSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFA11E4711C77A52B900EE7 /* ForecastSettingsSection.swift */; };
 		0C6EA39FB8F34E9ACED6D08E /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = FAC869480B9B1F0365874A71 /* Localizable.xcstrings */; };
 		19B6FE24DC5ED497CCFF801C /* SmallSquareWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DBB5F5674420E0F826EDC7E /* SmallSquareWidget.swift */; };
@@ -248,6 +262,9 @@
 		E85CC39EC256C4C92F2F5EFC /* WhenReset.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhenReset.entitlements; sourceTree = "<group>"; };
 		EB9D7045FB4DE235956832A5 /* WidgetSurfaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSurfaces.swift; sourceTree = "<group>"; };
 		ED627E4DF6E715DBF4E8EF54 /* WhenResetWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhenResetWidgets.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A0B01 /* WidgetSnapshotRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotRefresh.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A0B04 /* LocalProviderUsageFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProviderUsageFetcher.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A0B07 /* WidgetUsageRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetUsageRefresh.swift; sourceTree = "<group>"; };
 		EFD85B28D46EBF5B21139FCC /* ForecastReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastReminderScheduler.swift; sourceTree = "<group>"; };
 		F52605447BCF2BEF02D2449B /* UsageCardFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageCardFooter.swift; sourceTree = "<group>"; };
 		F7035D0B4E6A0DD18CA71769 /* InterfaceChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterfaceChrome.swift; sourceTree = "<group>"; };
@@ -277,6 +294,7 @@
 				73ED344AD33B0615417863D6 /* MacContentView.swift */,
 				7FC7BEDD54B2367F7AE9D12C /* MiniMaxProvider.swift */,
 				E9C306DB417F6AC2D3E5F708 /* QoderBrowserSignIn.swift */,
+				F1A2B3C4D5E6F708192A0B04 /* LocalProviderUsageFetcher.swift */,
 				C7A1E4B92F6D48A0B1C3D5E7 /* QoderProvider.swift */,
 				44C03C63FA5B98872D5DD44C /* PushServer.swift */,
 				22A34B8AD4E369E693118E17 /* reset.icon */,
@@ -319,6 +337,7 @@
 				3876C46818ADC92F27EEA561 /* Info.plist */,
 				C2DE2CE6E046B84BBD8A8E9D /* WhenResetWidgets.entitlements */,
 				ED627E4DF6E715DBF4E8EF54 /* WhenResetWidgets.swift */,
+				F1A2B3C4D5E6F708192A0B07 /* WidgetUsageRefresh.swift */,
 				112366875DD0911F7B308C57 /* WhenResetWidgetsMac.entitlements */,
 			);
 			path = WhenResetWidgets;
@@ -407,6 +426,7 @@
 				542AB95294078AEB97505F7C /* UsageCardCopy.swift */,
 				6274C292BBFA5C51D1B45EE3 /* UsageNotificationCopy.swift */,
 				EB9D7045FB4DE235956832A5 /* WidgetSurfaces.swift */,
+				F1A2B3C4D5E6F708192A0B01 /* WidgetSnapshotRefresh.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -680,6 +700,8 @@
 				4186BCB8B741AB69E497D9DB /* WorkerQRScannerView.swift in Sources */,
 				1A848AB7FE99FB2750B38FA3 /* WorkerSettingsView.swift in Sources */,
 				9C7F6EE1DEB3AE4669603A8E /* ZAIProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B05 /* LocalProviderUsageFetcher.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B02 /* WidgetSnapshotRefresh.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -709,6 +731,18 @@
 				65AF3E99F58BBCFB4ACDB0B9 /* UsageCardCopy.swift in Sources */,
 				918B6D95F608F58F860B096E /* UsageNotificationCopy.swift in Sources */,
 				CEA9D6AC3403C032777A577F /* WhenResetWidgets.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B08 /* WidgetUsageRefresh.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B03 /* WidgetSnapshotRefresh.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B06 /* LocalProviderUsageFetcher.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B11 /* KeychainStore.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B12 /* ChatGPTProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B13 /* ClaudeProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B14 /* CopilotProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B15 /* KimiProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B16 /* MiniMaxProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B17 /* QoderProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B18 /* ZAIProvider.swift in Sources */,
+				F1A2B3C4D5E6F708192A0B19 /* AdditionalProviders.swift in Sources */,
 				5BD8837709BB3C9D834AFB44 /* WidgetSurfaces.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -792,7 +826,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -812,7 +846,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.16;
+				MARKETING_VERSION = 1.17;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -860,7 +894,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -874,7 +908,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.16;
+				MARKETING_VERSION = 1.17;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

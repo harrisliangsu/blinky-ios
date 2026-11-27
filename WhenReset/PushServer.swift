@@ -345,12 +345,6 @@ enum PushServerEnrollment: Hashable, Sendable {
     case accessKey(String)
 }
 
-struct PushRegistrationCredentials: Codable, Equatable, Sendable {
-    var deviceID: UUID
-    var deviceSecret: String
-    var serverURL: URL
-}
-
 struct ServerAccountSyncResult: Sendable {
     var consentRevision: Int64
     var accountDetails: ProviderAccountDetails?
